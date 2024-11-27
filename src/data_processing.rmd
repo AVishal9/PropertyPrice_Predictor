@@ -1,0 +1,73 @@
+
+library(tidyverse)
+library(ggplot2)
+
+
+data <- read.csv("data_original/rawdata.csv") %>% 
+  drop_na()
+
+```{r}
+summary(data$house_size)
+
+summary(data$bed)
+
+summary(data$bath)
+````
+75% of the houses are below 2478 square feet. 
+Outliers, ie; very expensive mansions or data entry mistakes skewing the data. 
+
+```{r}
+house_size_threshold <- quantile(data$house_size, 0.99)
+baths_threshold <- quantile(data$bath, 0.99)
+beds_threshold <- quantile(data$bed, 0.99)
+
+
+filtered_data <- data %>%
+  filter(house_size <= house_size_threshold,
+         bath <= baths_threshold,
+         bed <= beds_threshold)
+  
+```
+Thus we only consider data upto 99th percentile, which removes about 22k observations
+
+```{r}
+ggplot(filtered_data, aes(x = house_size)) +
+  geom_histogram(binwidth = 100, fill = "blue", color = "white", alpha = 0.7) +
+  labs(
+    title = "House Size Distribution",
+    x = "House Size (sq ft)",
+    y = "Count"
+  ) +
+  theme_bw()
+```
+
+Now categorize houses based on size, number of bedrooms and baths
+```{r}
+filtered_data <- filtered_data %>%
+  mutate(
+    house_size_category = case_when(
+      house_size < 1500 ~ "Small",
+      house_size >= 1500 & house_size <= 2500 ~ "Medium",
+      house_size > 2500 & house_size <= 4000 ~ "Large",
+      house_size > 4000 ~ "Extra-Large"
+    ),
+    bed_category = case_when(
+      bed <= 2 ~ "Small",
+      bed > 2 & bed <= 4 ~ "Medium",
+      bed > 4 ~ "Large"
+    ),
+    bath_category = case_when(
+      bath <= 2 ~ "Small",
+      bath > 2 & bath <= 3 ~ "Medium",
+      bath > 3 ~ "Large"
+    )
+  )
+```
+
+```{r}
+# Stratification
+filtered_data %>%
+  group_by(house_size_category, bed_category, bath_category, city) %>%
+  summarise(count = n())
+
+```
