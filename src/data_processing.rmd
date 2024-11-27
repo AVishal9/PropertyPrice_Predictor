@@ -66,8 +66,11 @@ filtered_data <- filtered_data %>%
 
 ```{r}
 # Stratification
-filtered_data %>%
-  group_by(house_size_category, bed_category, bath_category, city) %>%
-  summarise(count = n())
-
+set.seed(123)
+sample_data <- filtered_data %>%
+  group_by(house_size_category, bed_category, bath_category, state) %>%
+  mutate(strata_count = n()) %>% # Count rows per stratum
+  sample_frac(size = 20000 / nrow(filtered_data), replace = FALSE) %>%
+  ungroup()
 ```
+
