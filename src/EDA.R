@@ -282,5 +282,126 @@ sampled_data %>%
 summary(sampled_data)
 
 ###
+# One-Hot Encoding of Categorical Variables
+###
+#As the dataset has high-cardinality categorical variables, it was difficult to one hot encode them, as the computational power
+#wasn't sufficient. 
+
+#Summarising unique values of each variable in the daatset
+col_no_unique <- data.frame(sampled_data[,-1] %>% summarise(across(everything(), n_distinct)) %>% pivot_longer(everything()))
+
+#Creating dummy variables for categorical variables
+
+# Dummy variables for status column 
+status <- unique(sampled_data$status) #Two unique variables "sold" and "for_sale"
+status_dummies <- dummy_cols(sampled_data, select_columns = 'status')[,(ncol(sampled_data)+1):(ncol(sampled_data)+length(unique(sampled_data$status)))]
+status_dummies <- status_dummies[,-ncol(status_dummies)] #Reducing one column to avoid multicollinearity 
+
+#Dummy Variable for state column 
+
+state <- unique(sampled_data$state) #51 unique values
+state_dummies <- dummy_cols(sampled_data, select_columns = 'state')[,(ncol(sampled_data)+1):(ncol(sampled_data)+length(unique(sampled_data$state)))]
+state_dummies <- state_dummies[,-ncol(state_dummies)] #Reducing one column to avoid multicollinearity 
+
+
+#Since city, street, and zip code, brokered_by have extremely high unique values, it is better to frequency encode them to reduce the
+#high dimensionality
+
+#Grouping Variables for dimensionality reduction
+
+# Grouping zip code below frequency 100
+zip_code_stats <- sampled_data %>%
+  group_by(zip_code) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+# Filter zip code with occurrences <= 19
+zip_stats_less_than_19 <- zip_code_stats %>%
+  filter(count <= 19) %>%
+  pull(zip_code)
+
+# Replace zip codes with 'other' if they occur <= 10 times
+sampled_data$zip_code <- ifelse(sampled_data$zip_code %in% zip_stats_less_than_19 , 'other', sampled_data$zip_code)
+
+# Get the number of unique zip_codes
+length(unique(sampled_data$zip_code))
+
+#Grouping cities Below frequency 100
+city_stats <- sampled_data %>%
+  group_by(city) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+# Filter cities with occurrences <= 100
+city_stats_less_than_100 <- city_stats %>%
+  filter(count <= 100) %>%
+  pull(city)
+
+# Replace city names with 'other' if they occur <= 10 times
+sampled_data$city <- ifelse(sampled_data$city %in% city_stats_less_than_100, 'other', sampled_data$city)
+
+# Get the number of unique locations
+length(unique(sampled_data$city))
+
+# Street below frequency 1
+street_stats <- sampled_data %>%
+  group_by(street) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+# Filter streets with occurrences <= 1
+street_stats_less_than_1<- street_stats %>%
+  filter(count <= 1) %>%
+  pull(street)
+
+# Replace street with 'other' if they occur <= 10 times
+sampled_data$street <- ifelse(sampled_data$street %in% street_stats_less_than_1, 'other', sampled_data$street)
+
+# Get the number of unique stret
+length(unique(sampled_data$street))
+
+# Grouping Brokered by below frequency 100
+broker_stats <- sampled_data %>%
+  group_by(brokered_by) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+# Filter broker with occurrences <= 100
+broker_stats_less_than_100<- broker_stats %>%
+  filter(count <= 100) %>%
+  pull(brokered_by)
+
+# Replace broker with 'other' if they occur <= 10 times
+sampled_data$brokered_by <- ifelse(sampled_data$brokered_by %in% broker_stats_less_than_100, 'other', sampled_data$brokered_by)
+
+# Get the number of unique brokers
+length(unique(sampled_data$brokered_by))
+
+# Dummy Variable for city column 
+city <- unique(sampled_data$city) #6012 unique Variables before grouping.After grouping 13
+city_dummies <- dummy_cols(sampled_data, select_columns = 'city')[,(ncol(sampled_data)+1):(ncol(sampled_data)+length(unique(sampled_data$city)))]
+city_dummies <- city_dummies[,-ncol(city_dummies)] #Reducing one column to avoid multicollinearity 
+
+#Dummy Variable for brokered_by 
+brokered_by <- unique(sampled_data$brokered_by) #13816 unique values. After grouping 5 
+broker_dummies <- dummy_cols(sampled_data, select_columns = 'brokered_by')[,(ncol(sampled_data)+1):(ncol(sampled_data)+length(unique(sampled_data$brokered_by)))]
+broker_dummies <- broker_dummies[,-ncol(broker_dummies)] 
+
+#Dummy Variable for street
+street <- unique(sampled_data$street) #28412 unique values. 8 after grouping 
+street_dummies <- dummy_cols(sampled_data, select_columns = 'street')[,(ncol(sampled_data)+1):(ncol(sampled_data)+length(unique(sampled_data$street)))]
+steet_dummies <- street_dummies[,-ncol(street_dummies)]  #too large for my laptop to run. We want to keep the analysis state level so we will exclude streets.
+
+#Dummy Variable for zip_code
+zip_code <- unique(sampled_data$zip_code) #10602 unique values. 9 after grouping 
+zipcode_dummies <- dummy_cols(sampled_data, select_columns = 'zip_code')[,(ncol(sampled_data)+1):(ncol(sampled_data)+length(unique(sampled_data$zip_code)))]
+zipcode_dummies <- zipcode_dummies[,-ncol(zipcode_dummies)]
+
+
+#Removing the categorical columns and attaching the binary variable columns 
+data2 <- subset(sampled_data, select = -c(status, state, city, brokered_by, street, zip_code))
+data2 <- cbind(data2, state_dummies, status_dummies,city_dummies, broker_dummies,street_dummies,zipcode_dummies)
+
+###
 #Feature Engineering 
 ###
