@@ -42,7 +42,7 @@ data_og <- data_og %>%
 
 # Making a composite key since there isn't any unique id
 data_og$unique_id <- paste(data_og$street, data_og$city, data_og$house_size, 
-                           data_og$zip_code, data_og$price, data_og$bed, data_og$bath, sep = "_")
+                           data_og$zip_code, data_og$bed, data_og$bath, sep = "_")
 
 # Checking if there are any duplicates
 duplicate_check <- sum(duplicated(data_og$unique_id))
@@ -157,6 +157,129 @@ high_cor <- high_cor %>% filter(abs(corr) >= 0.95) # Bath-bed have 76% correlati
 # Making a heat map of correlations between numeric variable 
 corrplot(cor_mat, method="color",tl.cex = 0.6, tl.col = "black")
 
+###
+# Outlier Detection and Elimination 
+###
+
+# Examining the distribution of non binary numeric variables
+
+# Convert summary to a data frame
+summary_df <- as.data.frame.matrix(summary(sampled_data))
+
+# Create a table that shows the summary statistics to evaluate the distribution of each variable.
+kable(summary_df, format = "html") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+# Histogram of numerical non-dummy variables
+sampled_data %>% 
+  dplyr::select(bath, bed, house_size, land_size, price) %>% 
+  gather() %>% 
+  ggplot(aes(value)) +
+  facet_wrap(~ key, scales = "free") +
+  geom_boxplot()
+
+# The variables house_size, price, land_size seem to have extreme values
+# Our target variable price has a long right tail(the mean is higher than the median). The minimum value seems to be $1 which doesn't seem practical
+# House sizes also have unrealistically large value, the max value which of 598,697 is uncommon for residential areas. This is either a very rare case of luxury house 
+# or a data entry, thus can be removed. Even here the mean > than the median thus indicating a longer right tail.
+# Land size also has a large range, with the minimium being 0.00 acres and the maximum being 4.356 billion sq. ft. 
+# The mean exceeds the median by a lot pointing towards an extreme upper value.
+
+unique(sampled_data$bath) #Since the data sampling wasn't balanced. 
+#There seems to be an extreme entry of 198 baths
+# The bed ranges from 1 to 99.
+# However, both bed and bath have similar mean and median indicating their distributions are 
+# relatively similar 
+
+###
+# House_size to price ratio. 
+###
+#To assess how much square footage can be bought for a dollar
+ratio <- sampled_data%>%
+  mutate(ratio_hp = house_size/price)
+
+#Summary statistics of this new variable
+summary(ratio$ratio_hp)
+ratio %>% 
+  dplyr::select(ratio_hp) %>% 
+  gather() %>% 
+  ggplot(aes(value)) +
+  facet_wrap(~ key, scales = "free") +
+  geom_boxplot()
+
+
+#Grouped by state to analyse the trend 
+ratio %>%
+  dplyr::select(ratio_hp) %>%
+  dplyr::group_by(ratio$state) %>%
+  summarise(mean_ratio = mean(ratio_hp)) %>%
+  arrange(desc(mean_ratio)) %>%
+  ungroup()%>%
+  print(n = 51)
+
+# Michigan and Texas have extremely high ratios 2.98 and 0.474 respectively before outlier removal
+# This might be because they have cheaper reale state prices (More square footage for less price) or it is just a data problem
+# Properties with unusually low ratios could indicate overpriced properties or luxury homes.
+
+michigan_data <- sampled_data %>% filter(state == "Michigan")
+texas_data <- sampled_data %>% filter(state == "Texas")
+
+# Identifying extreme values given the distributions
+
+#Creating a subset of data with high outlier values
+outlier_subset <- subset(sampled_data, select = c(price, house_size, land_size))
+
+# Since around 99% of the observations lie within 3 standard deviations, thus any value that is 
+# more than 3 sd above or below the mean will be a potential outlier.
+# (mean - 3 * sd) calculates the lower bound.
+# (mean + 3 * sd) calculates the upper bound.
+#Finding out share of observations that are below the 0.15th percentile.
+#The share of observations above 99.85th percentile
+
+# Remove extreme outliers beyond the 98th percentile
+remove_extreme <- function(outlier_subset, column) {
+  lower_bound <- quantile(outlier_subset[[column]], 0.01, na.rm = TRUE)
+  upper_bound <- quantile(outlier_subset[[column]], 0.99, na.rm = TRUE)
+  
+  outlier_subset %>% filter(outlier_subset[[column]] >= lower_bound & outlier_subset[[column]] <= upper_bound)
+}
+
+#removing extreme values from the subset
+outlier_subset <- outlier_subset %>%
+  remove_extreme("price") %>%
+  remove_extreme("house_size") %>%
+  remove_extreme("land_size")
+
+# Using Histogram to check the distribution of these variables, there still seems to be a right tail, especially in land size
+outlier_subset %>% 
+  dplyr::select(house_size, land_size, price) %>% 
+  gather() %>% 
+  ggplot(aes(value)) +
+  facet_wrap(~ key, scales = "free") +
+  geom_histogram()
+
+# while the mean and median of house_size and price are still greater than median,the mean and median of land_size
+# has significant difference 
+summary(outlier_subset) 
+
+#Since they are still positively skewed a log transformation might be beneficial while building the model
+
+#Now removing extreme values from the sampled_data 
+sampled_data<- sampled_data %>%
+  remove_extreme("price") %>%
+  remove_extreme("house_size") %>%
+  remove_extreme("land_size")
+
+#Using Histogram to check the distribution all the variables in sampled data after outlier elimination
+sampled_data %>% 
+  dplyr::select(bed, bath, house_size, land_size, price) %>% 
+  gather() %>% 
+  ggplot(aes(value)) +
+  facet_wrap(~ key, scales = "free") +
+  geom_histogram()
+
+# Inspecting Summary statistics
+summary(sampled_data)
 
 ###
 #Feature Engineering 
