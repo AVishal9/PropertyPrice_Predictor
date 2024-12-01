@@ -1,10 +1,77 @@
+prev_sold_date would mean that there is a possibility of multiple observations for the same house, how can i check this and fix it? I would like to have
 
+
+```{r}
 library(tidyverse)
 library(ggplot2)
-
+```
 
 data <- read.csv("data_original/rawdata.csv") %>% 
   drop_na()
+
+
+```{r}
+unique(data$state)
+#This returns 53 states, next step drop states outside US.
+
+valid_states <- c(
+  "Massachusetts", "Connecticut", "New Jersey", "New York",
+  "New Hampshire", "Vermont", "Rhode Island", "Wyoming",
+  "Maine", "Pennsylvania", "West Virginia", "Delaware",
+  "Ohio", "Maryland", "Virginia", "Colorado",
+  "District of Columbia", "North Carolina", "Kentucky", "South Carolina",
+  "Tennessee", "Georgia", "Alabama", "Florida",
+  "Mississippi", "Texas", "Missouri", "Arkansas",
+  "Louisiana", "Indiana", "Illinois", "Michigan",
+  "Wisconsin", "Iowa", "Minnesota", "South Dakota",
+  "Nebraska", "North Dakota", "Montana", "Idaho",
+  "Kansas", "Oklahoma", "New Mexico", "Utah",
+  "Nevada", "Washington", "Oregon", "Arizona",
+  "California", "Hawaii", "Alaska"
+)
+
+clean_data <- data %>%
+  filter(state %in% valid_states)
+```
+
+```{r}
+#There is no unique ID for house, so create a composite key and remove duplicates
+clean_data <- clean_data %>% 
+  mutate(
+    h_id = paste(zip_code, street, city, house_size, bed, bath, sep = "_")
+  )
+```
+
+```{r}
+#Check how many times a house was sold: Count the number of entries for each house 
+clean_data <- clean_data %>% 
+  group_by(h_id) %>% 
+  mutate(sale_frequency = n()) %>% 
+  ungroup()
+
+#Remove duplicate entries
+# Keep only the most recent sale based on prev_sold_date
+# Convert `prev_sold_date` to Date format
+clean_data <- clean_data %>% 
+  mutate(prev_sold_date = as.Date(prev_sold_date)) %>% 
+  group_by(h_id) %>% 
+  arrange(desc(prev_sold_date)) %>%  # Sort by most recent date
+  slice(1) %>%  # Keep the first (most recent) record
+  ungroup() %>% 
+  select(h_id, zip_code, street, city, state, house_size,
+         acre_lot, bed, bath, price, sale_frequency)
+
+```
+
+```{r}
+#Check if still any duplicates exist
+duplicates <- clean_data %>%
+  group_by(h_id) %>%
+  summarise(count = n()) %>%
+  filter(count > 1)
+
+#No duplicates
+```
 
 ```{r}
 summary(data$house_size)
@@ -22,11 +89,10 @@ baths_threshold <- quantile(data$bath, 0.99)
 beds_threshold <- quantile(data$bed, 0.99)
 
 
-filtered_data <- data %>%
+filtered_data <- clean_data %>%
   filter(house_size <= house_size_threshold,
          bath <= baths_threshold,
          bed <= beds_threshold)
-  
 ```
 Thus we only consider data upto 99th percentile, which removes about 22k observations
 
@@ -63,6 +129,7 @@ filtered_data <- filtered_data %>%
     )
   )
 ```
+
 
 ```{r}
 # Stratification
