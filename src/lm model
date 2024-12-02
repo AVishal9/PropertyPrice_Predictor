@@ -1,0 +1,158 @@
+######
+#Estimating the model
+#####
+
+# Estimating the Linear Regression model, to establish a base level performance
+# We will begin by building a linear regression model using Forward selection 
+
+#Excluding unique_ID as it is not needed for estimating the model
+
+train_data <- train_data  %>%
+  dplyr::select(-"unique_id") # customer_ID is excluded for the model estimation, since it is not needed for the model
+
+# Forward Selection of Regressors
+
+# Setting up a variable 'regressors' that contains all regressors except the dependent variable
+names(train_data) <- gsub(" ", "_", names(train_data))  # Replacing spaces in column names with underscores
+regressors <- names(train_data)[names(train_data)!="price"]
+
+# Beginning with a null model i.e. with only intercept
+current_model <- lm(as.formula(paste("price ~ 1")), data = train_data) # intercept-only model
+selected_regressors <- c() # Empty list to store the selected predictor
+remaining_regressors <- regressors # Regressors that still need to be evaluated
+best_model <- current_model
+best_rss <- sum(residuals(best_model)^2) # Compute RSS for the intercept-only model
+
+# Forward selection process
+for (i in seq_along(regressors)) {
+  # Evaluate each remaining predictor
+  potential_models <- lapply(remaining_regressors, function(pred) {
+    lm(as.formula(paste("price ~", paste(c(selected_regressors, pred), collapse = "+"))), 
+       data = train_data)
+  })
+  
+  # Calculate RSS for each candidate model
+  rss_values <- sapply(potential_models, function(model) {
+    sum(residuals(model)^2)
+  })
+  
+  # Find the predictor that gives the lowest RSS
+  best_model_index <- which.min(rss_values)
+  
+  # Select the predictor with the lowest RSS if it improves the model
+  if (length(rss_values) > 0 && rss_values[best_model_index] < best_rss) {
+    selected_regressors <- c(selected_regressors, remaining_regressors[best_model_index])
+    remaining_regressors <- remaining_regressors[-best_model_index]
+    best_model <- potential_models[[best_model_index]]
+    best_rss <- rss_values[best_model_index]
+    print(paste("Added predictor:", selected_regressors[length(selected_regressors)]))
+  } else {
+    break # Stops if there is no improvement in RSS
+  }
+}
+
+# Final model
+feature_selection <- summary(best_model)
+
+# The R-squared of the best model is 0.5058(penalty for the number of regressors)
+#The forward selection process found a model with 96 regressors, more than half of which aren't statistically significant
+# They also do not add a lot to the model theoretically. Therefore, the regressors which aren't satistically significant will be removed
+# As most of those are categorical variables, therefore by removing them the model will be simplified and overfitting reduced.
+
+# Regressors that are statistically significant above 0.01 level - house_size, state_california, bath, brokered_by_16829, state_Washington
+# state_Florida               
+# state_Massachusetts        
+# state_Hawaii                
+# state_Arizona               
+# state_Oregon                
+# state_New_York              
+# bed                        
+# state_District_of_Columbia  
+# state_Idaho                
+# city_Los_Angeles           
+# street_399376              
+# state_New_Jersey            
+# state_Nevada                
+# state_Colorado              
+# city_Sacramento           
+# state_Utah                  
+# land_size                   
+# state_Montana               
+# status_for_sale             
+# state_Rhode_Island          
+# city_Dallas                 
+# brokered_by_22611           
+# city_Philadelphia  
+# sale_frequency
+# zip_code_77008
+# zip_code_95648
+# city_Chicago
+# city_Charlotte
+# city_other
+# city_Saint_Louis
+
+# Eliminating regressors based on statistical significance left us with 35 regressors
+
+# Calculating feature importance using random forest
+ rf_model <- randomForest(price ~ ., data = train_data)
+ importance(rf_model)
+
+
+#Model 1: linear-linear realtionship 
+
+#Visualizing the relationship
+plot(train_data$house_size, train_data$price)
+plot(train_data$land_size, train_data$price) #The plots possibly show an Exponential Relationship between the regressors and price
+
+lm1 <- lm(price ~ )
+
+# Model 2: Model with Log-linear relationship 
+plot(log(train_data$house_size), log(train_data$price), 
+     xlab = "House Size", ylab = "Log of Price", main = "Log(Price) vs House Size")
+plot(train_data$land_size, log(train_data$price), 
+     xlab = "Land Size", ylab = "Log of Price", main = "Log(Price) vs Land Size")
+
+lm2 <- lm(log(price ~ ))
+
+# Model 3: Model with Log-Log relationship 
+
+# Visualing the relationships between regressors using log-log scatterplot.
+plot(log(train_data$house_size), log(train_data$price), 
+     xlab = "Log of House Size", ylab = "Log of Price", main = "Log-Log Model")
+plot(log(train_data$land_size), log(train_data$price), 
+     xlab = "Log of Land Size", ylab = "Log of Price", main = "Log-Log Model") 
+
+lm <- lm(log(price ))
+
+# From the scatterplots it is evident that land and price share an additive realtionship while, house size and price share
+# a multiplicative relationship.
+
+
+
+
+# Fitting a log-linear 
+
+
+
+
+
+# Linear Regression using Cross-Validation 
+
+
+
+# Prediction using test data 
+
+# Accuracy of chosen models
+
+# Model Deployment
+
+
+
+
+
+
+
+
+
+
+
