@@ -166,14 +166,135 @@ plot(lm3)
 
 
 
-# Linear Regression using Cross-Validation 
+# Plotting to check residuals
+par(mfrow=c(2,2))
+plot(lm3)
+library(sandwich)
+bptest(lm3) #Reject the null hypothesis, the errors are still heterosckedastic
+robust_se <- coeftest(lm3, vcov = vcovHC(lm3, type = "HC1"))
+print(robust_se)
 
-
+# The deviations suggest a non-linearity in the model
+# There are some outliers that might have an impact on the model. See if they change when I use the other data.
+# The residuals indicate non-linearity
+# Normality of residuals: The Q-Q plot indicates, the Q-Q plot is close to the dotted line indicating it is normally distributed
+# Just the tails are a bit further indicating presence of outliers(try it with balanced data).
 
 # Prediction using test data 
+# Interpretation 1% increase in house_size results in a 0.5% increase in price as a log-log model is used
+names(test_data) <- gsub(" ", "_", names(test_data))  # Replacing spaces in column names with underscores
+predicted_price <- exp(predict(lm3, newdata = test_data))
 
 # Accuracy of chosen models
+actuals <- test_data$price
 
+# Calculating relevant metrics
+MAE <- mean(abs(predicted_price - actuals))
+MSE <- mean((predicted_price - actuals)^2)
+RMSE <- sqrt(MSE)
+R2 <- cor(predicted_price, actuals)^2
+
+cat("MAE:", MAE, "\nMSE:", MSE, "\nRMSE:", RMSE, "\nR2:", R2)
+
+# MAE - On average, the model's prediction are off by $167,828.6. 
+# RMSE - On average, the model is $307,188.3 off per prediction.
+# RMSE > MAE suggests that large prediction errors exist, which may be caused by outliers or skewed data.
+
+#Plotting actual vs predicted price
+plot(actuals, predicted_price, main = "Predictions vs Actuals",
+     xlab = "Actual Values", ylab = "Predicted Values", pch = 20)
+abline(0, 1, col = "red")
+
+  
+# The model appears to consistently underpredict higher house prices, 
+# suggesting it might not adequately capture complex relationships or rare, high-priced observations.
+# a little data transformation needed
+
+
+####
+# XG boost: Incomplete
+####
+install.packages("xgboost")
+library(xgboost)
+
+new_data <- readRDS("house_data.rds")
+
+#creating an index to split the dataset into training dataset (70%)
+Index <- createDataPartition(
+  y = data2$price, 
+  p = .70, # The percentage of data in the training set
+  list = FALSE # The format of the results
+)
+
+#splitting into training and test dataset using the Index created above
+TrainData <- new_data[Index,]
+TestData  <- new_data[-Index,]
+
+# Separate the features and target variables 
+# And dropping features that are not necessary for model estimation
+x_train <- as.matrix(TrainData %>%
+            dplyr::select(-c(price,bed_category,house_size_category,bath_category,h_id)))  # Exclude target variable
+y_train <- TrainData$price
+
+x_test <- as.matrix(TestData %>%
+                      dplyr::select(-c(price,bed_category,house_size_category,bath_category,h_id)))
+y_test <- TestData$price
+
+# Convert data into DMatrix, a special format for XGBoost
+dtrain <- xgb.DMatrix(data = x_train, label = y_train)
+dtest <- xgb.DMatrix(data = x_test, label = y_test) 
+
+
+
+# Define hyperparameters for XGBoost
+params <- list(
+  objective = "reg:squarederror",  # Regression objective
+  eta = 0.1,                      # Learning rate
+  max_depth = 6,                  # Maximum depth of trees
+  subsample = 0.8,                # Subsample ratio of the training instances
+  colsample_bytree = 0.8,         # Subsample ratio of columns when constructing each tree
+  nthread = 2                     # Number of threads to use
+)
+
+# Train the model
+set.seed(125)
+
+cv_results <- xgb.cv(
+  params = params,
+  data = dtrain,
+  nrounds = 150,                  # Number of boosting rounds
+  nfold = 5,                      # Number of folds (k-fold cross-validation)
+  showsd = TRUE,                  # Show standard deviation of the performance metric
+  stratified = TRUE,              # Stratify folds if necessary
+  print_every_n = 10,             # Print progress every 10 rounds
+  early_stopping_rounds = 10      # Stop early if there's no improvement after 10 rounds
+)
+
+# Get the best number of boosting rounds
+best_nrounds <- cv_results$best_iteration
+cat("Best number of boosting rounds:", best_nrounds, "\n")
+
+# Train the model with the best number of boosting rounds
+xgb_model_cv <- xgb.train(
+  params = params,
+  data = dtrain,
+  nrounds = best_nrounds
+)
+
+# Predict on test data
+y_pred_cv <- predict(xgb_model_cv, newdata = dtest)
+
+# Calculate evaluation metrics
+mae_cv <- mean(abs(y_pred_cv - TestData$price))
+mse_cv <- mean((y_pred_cv - TestData$price)^2)
+rmse_cv <- sqrt(mse_cv)
+r2_cv <- 1 - (sum((TestData$price - y_pred_cv)^2) / sum((TestData$price - mean(TestData$price))^2))
+
+# Print evaluation metrics
+cat("Mean Absolute Error (MAE):", mae_cv, "\n")
+cat("Mean Squared Error (MSE):", mse_cv, "\n")
+cat("Root Mean Squared Error (RMSE):", rmse_cv, "\n")
+cat("R-squared (R2):", r2_cv, "\n")
 # Model Deployment
 
 
