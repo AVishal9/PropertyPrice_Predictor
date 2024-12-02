@@ -212,7 +212,7 @@ abline(0, 1, col = "red")
 
 
 ####
-# XG boost: Incomplete
+# XG boost: Trained and tested with house_data.rds
 ####
 install.packages("xgboost")
 library(xgboost)
@@ -221,7 +221,7 @@ new_data <- readRDS("house_data.rds")
 
 #creating an index to split the dataset into training dataset (70%)
 Index <- createDataPartition(
-  y = data2$price, 
+  y = new_data$price, 
   p = .70, # The percentage of data in the training set
   list = FALSE # The format of the results
 )
