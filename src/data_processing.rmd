@@ -157,5 +157,21 @@ sample_proportions <- stratified_sample %>%
   mutate(proportion_sample = count_sample / sum(count_sample))
 ```
 
+```{r}
+#Creating unique id for the each composite key
+stratified_sample$h_id <- seq_len(nrow(stratified_sample))
+
+#Remove categorical variables
+stratified_sample <- stratified_sample %>% 
+  select(-house_size_category, -bath_category, -bed_category)
+  
+# To ensure unit consistency converting acres into square feet
+# and changing the feature name to land_size
+stratified_sample <- stratified_sample %>% 
+  mutate(land_size = acre_lot *43560) %>%
+  select(-acre_lot)
+```
+
+
 saveRDS(stratified_sample, file = "data_processed/house_data.rds")
 
