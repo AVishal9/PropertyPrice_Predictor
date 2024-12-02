@@ -109,35 +109,46 @@ unique(house_data$bath) #Since the data sampling wasn't balanced.
 ###
 # House_size to price ratio. 
 ###
-#To assess how much square footage can be bought for a dollar
+#To assess how much square footage can be bought for a thousand dollars
 ratio <- house_data%>%
-  mutate(ratio_hp = house_size/price)
+  mutate(ratio_hp = 1000* (house_size/price))
 
 #Summary statistics of this new variable
 summary(ratio$ratio_hp)
-ratio %>% 
-  select(ratio_hp) %>% 
-  gather() %>% 
-  ggplot(aes(value)) +
-  facet_wrap(~ key, scales = "free") +
-  geom_boxplot()
 
+ratio_filtered <- ratio %>%
+  filter(ratio_hp <= quantile(ratio_hp, 0.99, na.rm = TRUE))
+
+ratio_filtered %>%
+  ggplot(aes(x = "", y = ratio_hp)) +  
+  geom_boxplot() +
+  labs(
+    title = "Square Footage per 1000 Dollars",
+    y = "Square Footage per Dollar",
+    x = NULL
+  ) +
+  theme_minimal()
 
 #Grouped by state to analyse the trend 
-ratio %>%
-  dplyr::select(ratio_hp) %>%
-  dplyr::group_by(ratio$state) %>%
+state_price <- ratio %>%
+  select(ratio_hp) %>%
+  group_by(ratio$state) %>%
   summarise(mean_ratio = mean(ratio_hp)) %>%
   arrange(desc(mean_ratio)) %>%
-  ungroup()%>%
-  print(n = 51)
+  ungroup()
 
+#Ohio has unusually large mean size per dollar ratio, wrong data entry/outlier
+
+###MODIFY COMMENTS
 # Michigan and Texas have extremely high ratios 2.98 and 0.474 respectively before outlier removal
 # This might be because they have cheaper reale state prices (More square footage for less price) or it is just a data problem
 # Properties with unusually low ratios could indicate overpriced properties or luxury homes.
 
-michigan_data <- sampled_data %>% filter(state == "Michigan")
-texas_data <- sampled_data %>% filter(state == "Texas")
+michigan_data <- ratio_filtered %>% 
+  filter(state == "Michigan")
+
+texas_data <- ratio %>%
+  filter(state == "Texas")
 
 # Identifying extreme values given the distributions
 
