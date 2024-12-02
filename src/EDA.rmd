@@ -1,0 +1,45 @@
+####
+# Exploratory Data Analysis 
+####
+
+```{r}
+library(tidyverse)
+library(corrplot)
+```
+
+house_data <- readRDS("data_processed/house_data.rds")
+
+# Histogram for price
+ggplot(house_data, aes(x = price)) + 
+  geom_histogram(bins = 500, fill = "blue", color = "black") +
+  ggtitle("Distribution of House Prices")
+
+# Histogram for house_size
+ggplot(house_data, aes(x = house_size)) + 
+  geom_histogram(bins = 30, fill = "darkgreen", color = "black") +
+  ggtitle("Distribution of House Sizes")
+
+# Histogram for land_size
+ggplot(house_data, aes(x = land_size)) + 
+  geom_histogram(bins = 10, fill = "purple", color = "black") +
+  ggtitle("Distribution of Land Sizes")
+
+##Correlation Matrix
+```{r}
+# Select numeric columns for correlation
+numeric_cols <- house_data %>%
+  select_if(is.numeric) %>%                     
+  mutate_if(is.integer, as.numeric) %>%   # Convert integers to numeric
+  select(-c(h_id, street, zip_code))
+
+numeric_cols <- numeric_cols %>%
+  relocate(price, .before = everything()) # Move 'price' to the first column
+
+# Compute correlation matrix
+cor_matrix <- cor(numeric_cols, use = "pairwise.complete.obs")
+
+# Plot correlation heatmap
+corrplot(cor_matrix, method = "color", tl.cex = 0.6, 
+         addCoef.col = "white", tl.col = "black")
+```
+
