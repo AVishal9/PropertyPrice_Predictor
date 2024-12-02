@@ -402,6 +402,6 @@ zipcode_dummies <- zipcode_dummies[,-ncol(zipcode_dummies)]
 data2 <- subset(sampled_data, select = -c(status, state, city, brokered_by, street, zip_code))
 data2 <- cbind(data2, state_dummies, status_dummies,city_dummies, broker_dummies,street_dummies,zipcode_dummies)
 
-###
-#Feature Engineering 
-###
+### I think it is better to not one hot encode categorical variables for tree based algorithms.
+
+
