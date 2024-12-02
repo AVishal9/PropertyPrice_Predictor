@@ -91,20 +91,33 @@ feature_selection <- summary(best_model)
 # city_other
 # city_Saint_Louis
 
-# Eliminating regressors based on statistical significance left us with 35 regressors
+# Eliminating regressors based on statistical significance left us with 31 regressors
 
-# Calculating feature importance using random forest
- rf_model <- randomForest(price ~ ., data = train_data)
- importance(rf_model)
+final_regressors <-c("house_size", "bath","state_California", 
+                     "brokered_by_16829", "state_Washington", "state_Florida", "state_Massachusetts","state_Hawaii", "state_Arizona"               
+                  ,"state_Oregon", "state_New_York", "bed", "state_District_of_Columbia","state_Utah","land_size" ,"state_Montana",
+                   "state_Idaho","city_Los_Angeles","street_399376","state_New_Jersey","state_Nevada","state_Colorado" ,"city_Sacramento"           
+                  ,"status_for_sale ","state_Rhode_Island","city_Dallas","brokered_by_22611 ","city_Philadelphia", "sale_frequency",               
+                   "zip_code_77008","city_Charlotte")       
+                  
 
-
-#Model 1: linear-linear realtionship 
+#Model 1: linear-linear relationship 
 
 #Visualizing the relationship
 plot(train_data$house_size, train_data$price)
 plot(train_data$land_size, train_data$price) #The plots possibly show an Exponential Relationship between the regressors and price
 
-lm1 <- lm(price ~ )
+lm1 <- lm(as.formula(paste("price ~", paste(final_regressors, collapse = "+"))), data = train_data)
+summary(lm1)
+
+#The residual standard err0r is 303,800,on 19864 degrees of freedom. 
+#On average, the predictions of lm1 model are off by approximately $303,800 from the actual prices.
+#The R squared is 49.94%
+#There is still room for improvement
+
+# Plotting to check residuals
+par(mfrow=c(2,2))
+plot(lm1)
 
 # Model 2: Model with Log-linear relationship 
 plot(log(train_data$house_size), log(train_data$price), 
@@ -112,7 +125,16 @@ plot(log(train_data$house_size), log(train_data$price),
 plot(train_data$land_size, log(train_data$price), 
      xlab = "Land Size", ylab = "Log of Price", main = "Log(Price) vs Land Size")
 
-lm2 <- lm(log(price ~ ))
+lm2 <- lm(as.formula(paste("log(price) ~",paste(final_regressors, collapse = "+"))), data = train_data)
+summary(lm2)
+
+#R-squared is 59.3% whileresidual standard error is 0.4627
+
+# Plotting to check residuals
+par(mfrow=c(2,2))
+plot(lm2)
+
+
 
 # Model 3: Model with Log-Log relationship 
 
@@ -122,17 +144,25 @@ plot(log(train_data$house_size), log(train_data$price),
 plot(log(train_data$land_size), log(train_data$price), 
      xlab = "Log of Land Size", ylab = "Log of Price", main = "Log-Log Model") 
 
-lm <- lm(log(price ))
-
 # From the scatterplots it is evident that land and price share an additive realtionship while, house size and price share
 # a multiplicative relationship.
 
+final_regressors2 <-c ("bath","state_California", 
+                     "brokered_by_16829", "state_Washington", "state_Florida", "state_Massachusetts","state_Hawaii", "state_Arizona"               
+                     ,"state_Oregon", "state_New_York", "bed", "state_District_of_Columbia","state_Utah","land_size" ,"state_Montana",
+                     "state_Idaho","city_Los_Angeles","street_399376","state_New_Jersey","state_Nevada","state_Colorado" ,"city_Sacramento"           
+                     ,"status_for_sale ","state_Rhode_Island","city_Dallas","brokered_by_22611 ","city_Philadelphia", "sale_frequency",               
+                     "zip_code_77008","city_Charlotte")   
 
+lm3 <- lm(as.formula(paste("log(price) ~ log(house_size)+", paste(final_regressors2, collapse = "+"))), data = train_data)
+summary(lm3)
 
+#This model is the best out of the 3 models tested, the r squared is 60.34% while the residual standard error is 0.4568 which is the 
+#least out of the three
 
-# Fitting a log-linear 
-
-
+# Plotting to check residuals
+par(mfrow=c(2,2))
+plot(lm3)
 
 
 
