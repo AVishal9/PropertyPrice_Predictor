@@ -1,0 +1,143 @@
+library(tidyverse)
+library(corrplot)
+library(GGally)
+library(scales)
+library(plotly)
+
+# Load data
+house_data <- readRDS("data_processed/house_data.rds")
+
+# Apply log transformations
+house_data <- house_data %>%
+  mutate(
+    log_price = log1p(price),       # Log transformation for price
+    log_house_size = log1p(house_size),  # Log transformation for house size
+    log_land_size = log1p(land_size)  # Log transformation for land size
+  )
+  
+# Histogram for price with x-axis scaling
+ggplot(house_data, aes(x = price)) + 
+  geom_histogram(bins = 100, fill = "blue", color = "black") +
+  scale_x_continuous(
+    limits = c(0, 5000000), 
+    breaks = seq(0, 5000000, by = 1000000), 
+    labels = scales::label_dollar(scale = 1e-6, suffix = "M")
+  ) +
+  labs(
+    title = "Distribution of House Prices",
+    x = "Price (in USD)",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+# Histogram for House Size 
+ggplot(house_data, aes(x = house_size)) +
+  geom_histogram(bins = 30, fill = "darkgreen", color = "white", alpha = 0.8) +
+  labs(
+    title = "Distribution of House Sizes",
+    x = "House Size (sq ft)",
+    y = "Count"
+  ) +
+  theme_minimal()
+  
+
+#Create a histogram for the log-transformed land_size  
+ggplot(house_data, aes(x = log_land_size)) + 
+  geom_histogram(bins = 50, fill = "purple", color = "black") +
+  labs(
+    title = "Distribution of Log-Transformed Land Sizes",
+    x = "Log(Land Size + 1)",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+##Correlation Matrix
+# Select numeric columns for correlation
+numeric_cols <- house_data %>%
+  select_if(is.numeric) %>%                     
+  mutate_if(is.integer, as.numeric) %>%   # Convert integers to numeric
+  select(-c(h_id, street, zip_code))
+
+numeric_cols <- numeric_cols %>%
+  relocate(price, .before = everything()) # Move 'price' to the first column
+
+# Compute correlation matrix
+cor_matrix <- cor(numeric_cols, use = "pairwise.complete.obs")
+
+# Plot correlation heatmap
+corrplot(cor_matrix, method = "color", tl.cex = 0.6, 
+         addCoef.col = "white", tl.col = "black")
+
+
+
+### 1. Descriptive Statistics
+# Summary statistics for numerical variables
+numerical_summary <- house_data %>%
+  select(log_price, log_house_size, bath, bed, log_land_size) %>%
+  summarise_all(list(
+    mean = ~mean(., na.rm = TRUE),
+    median = ~median(., na.rm = TRUE),
+    sd = ~sd(., na.rm = TRUE),
+    min = ~min(., na.rm = TRUE),
+    max = ~max(., na.rm = TRUE)
+  ))
+
+print(numerical_summary)
+
+# Frequency distribution for categorical variables
+categorical_summary <- house_data %>%
+  select_if(is.character) %>%
+  summarise_all(~list(table(.)))
+
+print(categorical_summary)
+
+
+### 2. Distribution Analysis
+
+# Histograms for selected variables
+histogram_vars <- c("log_price", "log_house_size", "log_land_size", "bath", "bed")
+
+for (var in histogram_vars) {
+  p <- ggplot(house_data, aes(x = .data[[var]])) +
+    geom_histogram(bins = 30, fill = "blue", color = "black") +
+    labs(title = paste("Distribution of", var), x = var, y = "Count") +
+    theme_minimal()
+  print(p)
+}
+
+# Box plots for selected variables
+for (var in histogram_vars) {
+  p <- ggplot(house_data, aes(y = .data[[var]])) +
+    geom_boxplot(fill = "skyblue", color = "black") +
+    labs(title = paste("Box Plot of", var), y = var) +
+    theme_minimal()
+  print(p)
+}
+
+
+### 3. Feature Relationships
+# Scatter plots for price vs other variables
+scatter_vars <- c("log_house_size", "bath", "bed", "log_land_size")
+
+for (var in scatter_vars) {
+  p <- ggplot(house_data, aes(x = .data[[var]], y = log_price)) +
+    geom_point(alpha = 0.5, color = "blue") +
+    geom_smooth(method = "lm", color = "red", se = FALSE) +
+    labs(title = paste("Log Price vs", var), x = var, y = "Log Price") +
+    theme_minimal()
+  print(p)
+}
+
+# Pair Plots for selected numerical variables
+library(GGally)
+
+pair_plot_data <- house_data %>%
+  select(log_price, log_house_size, bath, bed, log_land_size)
+
+ggpairs(pair_plot_data,
+        lower = list(continuous = wrap("smooth", alpha = 0.5, size = 0.2, color = "blue")),
+        diag = list(continuous = wrap("densityDiag", fill = "blue", alpha = 0.4)),
+        upper = list(continuous = wrap("cor", size = 3))) +
+  theme_minimal() +
+  ggtitle("Pairwise Relationships Between Variables")
+
