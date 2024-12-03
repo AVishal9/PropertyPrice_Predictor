@@ -15,20 +15,6 @@ runtime: shiny
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-## Agenda
-
--   Introduction
-
--   Data & Data Cleaning
-
--   Findings from Exploratory Analysis
-
--   Models
-
--   Finding & Evaluation
-
-
-
 ## Relevance of Data-driven approach in Real Estate
 
 ```{r eruptions}
@@ -49,18 +35,52 @@ renderPlot({
 })
 ```
 
+## Agenda
+
+-   Introduction
+
+-   Data & Data Cleaning
+
+-   Findings from Exploratory Analysis
+
+-   Models
+
+-   Finding & Evaluation
+
+
+
+
+## Relevance of Data-driven approach in Real Estate
+
+
 ## About the Data: Source & Characteristics
 
 -   The dataset 
 -   Bullet 2
 -   Bullet 3
 
-## Data Cleaning  
+## Data Cleaning: Before Sampling 
 
-```{r cars}
-summary(cars)
+ - Dropped the states that weren't in mainland USA.
+ - Created a unique id using composite key to remove duplicates. 
+ - Only included the most recent sale of the observation.
+ - Included a column called sale frequency that represents the number of times the house has been sold in the past
+
+## Sampling Technique
+
+```{r Histogram displaying house size distribution}
+
+ggplot(clean_data, aes(x = house_size)) +
+  geom_histogram(binwidth = 100, fill = "blue", color = "white", alpha = 0.7) +
+  labs(
+    title = "House Size Distribution",
+    x = "House Size (sq ft)",
+    y = "Count"
+  ) +
+  theme_bw()
 ```
-
+## Data Preprocessing: After Sampling 
 
 ## Data Exploration 
 
+## Thank You!
