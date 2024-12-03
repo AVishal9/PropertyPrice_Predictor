@@ -3,7 +3,6 @@
 ####
 
 # Loading all the necessary libraries 
-
 library(tidyverse)
 library(kableExtra)
 library(naniar)
@@ -16,19 +15,6 @@ house_data <- readRDS("data_processed/house_data.rds")
 
 View(house_data)
 str(house_data) 
-
-#Creating a unique id for the each composite key
-house_data$h_id <- seq_len(nrow(house_data))
-
-#Remove categorical variables
-house_data <- house_data %>% 
-  select(-house_size_category, -bath_category, -bed_category)
-  
-# To ensure unit consistency converting acres into square feet
-# and changing the feature name to land_size
-house_data <- house_data %>% 
-  mutate(land_size = acre_lot *43560) %>%
-  select(-acre_lot)
 
 
 ####
@@ -153,7 +139,7 @@ texas_data <- ratio %>%
 # Identifying extreme values given the distributions
 
 #Creating a subset of data with high outlier values
-outlier_subset <- subset(sampled_data, select = c(price, house_size, land_size))
+outlier_subset <- subset(house_data, select = c(price, house_size, land_size))
 
 # Since around 99% of the observations lie within 3 standard deviations, thus any value that is 
 # more than 3 sd above or below the mean will be a potential outlier.
@@ -178,7 +164,7 @@ outlier_subset <- outlier_subset %>%
 
 # Using Histogram to check the distribution of these variables, there still seems to be a right tail, especially in land size
 outlier_subset %>% 
-  dplyr::select(house_size, land_size, price) %>% 
+  select(house_size, land_size, price) %>% 
   gather() %>% 
   ggplot(aes(value)) +
   facet_wrap(~ key, scales = "free") +
@@ -214,13 +200,13 @@ summary(sampled_data)
 #wasn't sufficient. 
 
 #Summarising unique values of each variable in the daatset
-col_no_unique <- data.frame(sampled_data[,-1] %>% summarise(across(everything(), n_distinct)) %>% pivot_longer(everything()))
+col_no_unique <- data.frame(house_data[,-1] %>% summarise(across(everything(), n_distinct)) %>% pivot_longer(everything()))
 
 #Creating dummy variables for categorical variables
 
 # Dummy variables for status column 
-status <- unique(sampled_data$status) #Two unique variables "sold" and "for_sale"
-status_dummies <- dummy_cols(sampled_data, select_columns = 'status')[,(ncol(sampled_data)+1):(ncol(sampled_data)+length(unique(sampled_data$status)))]
+status <- unique(house_data$status) #Two unique variables "sold" and "for_sale"
+status_dummies <- dummy_cols(house_data, select_columns = 'status')[,(ncol(house_data)+1):(ncol(house_data)+length(unique(house_data$status)))]
 status_dummies <- status_dummies[,-ncol(status_dummies)] #Reducing one column to avoid multicollinearity 
 
 #Dummy Variable for state column 
