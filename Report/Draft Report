@@ -1,0 +1,44 @@
+---
+title: "Predicting Real Estate Prices in the United States: A Data-Driven Approach"
+output: pdf_document
+author: 
+ - name: Maanya Bagga
+   affiliation: (23-451-164)
+ - name: Vishal Varma Alluri
+   affiliation: (19-876-093)
+ - name: Rakesh Varma Addada
+   affiliation: (19-876-135)
+date: "2024-12-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The real estate market is inherently dynamic and prone to fluctuations which impacts a wide array of stakeholders. These include investors, employees, tenants, property management teams, supply chain vendors, and the surrounding communities. The primary objective of this project was to develop a predictive model capable of accurately estimating real estate prices based on a set of predefined input features.
+
+## About the Dataset
+
+#### Source
+
+```{r cars}
+summary(cars)
+```
+
+#### Data Cleaning 
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+
+## Data Exploration and Visualisation
+
+
+
+## Models 
+
+
+## Evaluation 
