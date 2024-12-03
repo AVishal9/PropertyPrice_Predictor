@@ -214,10 +214,20 @@ abline(0, 1, col = "red")
 ####
 # XG boost: Trained and tested with house_data.rds
 ####
+
+  
 install.packages("xgboost")
 library(xgboost)
 
 new_data <- readRDS("house_data.rds")
+
+new_data <- new_data %>%
+            dplyr::select(-"bed_category",-"house_size_category",-"bath_category",-"h_id")%>%
+            dplyr::mutate(acre_lot = acre_lot *43560)
+
+#label encode categorical variables 
+new_data$city <- as.integer(new_data$city)
+new_data$state <- as.integer(new_data$state)
 
 #creating an index to split the dataset into training dataset (70%)
 Index <- createDataPartition(
@@ -233,11 +243,13 @@ TestData  <- new_data[-Index,]
 # Separate the features and target variables 
 # And dropping features that are not necessary for model estimation
 x_train <- as.matrix(TrainData %>%
-            dplyr::select(-c(price,bed_category,house_size_category,bath_category,h_id)))  # Exclude target variable
+            dplyr::select(-price)) # Exclude target variable
+
+  
 y_train <- TrainData$price
 
 x_test <- as.matrix(TestData %>%
-                      dplyr::select(-c(price,bed_category,house_size_category,bath_category,h_id)))
+                      dplyr::select(-price))
 y_test <- TestData$price
 
 # Convert data into DMatrix, a special format for XGBoost
@@ -291,12 +303,10 @@ rmse_cv <- sqrt(mse_cv)
 r2_cv <- 1 - (sum((TestData$price - y_pred_cv)^2) / sum((TestData$price - mean(TestData$price))^2))
 
 # Print evaluation metrics
-cat("Mean Absolute Error (MAE):", mae_cv, "\n")
+cat("Mean Absolute Error (MAE):", mae_cv, "\n") #179813.3
 cat("Mean Squared Error (MSE):", mse_cv, "\n")
-cat("Root Mean Squared Error (RMSE):", rmse_cv, "\n")
-cat("R-squared (R2):", r2_cv, "\n")
-
-
+cat("Root Mean Squared Error (RMSE):", rmse_cv, "\n") #413160.5
+cat("R-squared (R2):", r2_cv, "\n") #53.22%
 
 
 
