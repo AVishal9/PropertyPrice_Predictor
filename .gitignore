@@ -3,3 +3,4 @@
 .RData
 .Ruserdata
 data_original/data.csv
+data_processed/
