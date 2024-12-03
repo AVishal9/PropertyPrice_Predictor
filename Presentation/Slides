@@ -63,10 +63,11 @@ renderPlot({
 
  - Dropped the states that weren't in mainland USA.
  - Created a unique id using composite key to remove duplicates. 
- - Only included the most recent sale of the observation.
- - Included a column called sale frequency that represents the number of times the house has been sold in the past
+ - Only included the most recent sale of observations.
+ - Included a column called sale frequency that represents the number of times the house has been sold in the past.
 
 ## Sampling Technique
+- Stratified sampling based on house size, number of bedrooms and baths
 
 ```{r Histogram displaying house size distribution}
 
