@@ -38,14 +38,11 @@ renderPlot({
 ## Agenda
 
 -   Introduction
-
 -   Data & Data Cleaning
-
 -   Findings from Exploratory Analysis
-
 -   Models
-
 -   Finding & Evaluation
+-   Limitations 
 
 
 
@@ -83,5 +80,24 @@ ggplot(clean_data, aes(x = house_size)) +
 ## Data Preprocessing: After Sampling 
 
 ## Data Exploration 
+ - Analysed two ratios to gain insights from the data
+         - Price per square foot 
+         - Bathrooms/Bedrooms
+
+```{r Plot showing Bathroom to Bedroom Ratio}
+ratiob <- stratified_sample%>%
+  mutate(ratio_bb = bath/bed)
+
+#Summary statistics of this new variable
+summary(ratiob$ratio_bb) #There are maximum three bathrooms per bedroom which is acceptable
+
+# Visual Inspection
+ratiob %>% 
+  dplyr::select(ratio_bb) %>% 
+  gather() %>% 
+  ggplot(aes(value)) +
+  facet_wrap(~ key, scales = "free") +
+  geom_bar()  
+```
 
 ## Thank You!
