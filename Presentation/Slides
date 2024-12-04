@@ -43,8 +43,6 @@ renderPlot({
 -   Limitations 
 
 
-
-
 ## Relevance of Data-driven approach in Real Estate
 
 
@@ -52,7 +50,7 @@ renderPlot({
 
 -   The original dataset was a csv file containing real estate listings in the USA categorised by states, city and zipcode.
 -   Includes 12 different features and more than 2 million entries 
--   The data had 6 categorical variables some of which were highly cardinal.
+-   he data had 6 categorical variables some of which had highly cardinality.
 
 ## Data Cleaning: Before Sampling 
 
@@ -111,7 +109,7 @@ ratiob %>%
 | Model             | Mean Absolute Error (MAE) | Mean Squared Error (MSE) | Root Mean Squared Error (RMSE) | R-Squared |
 |---------------|--------------|-------------------|------------|------------|
 | Linear Regression | 187,846.8                 | 188,307,816,638          | 433,944.5                      | 53.71%    |
-|                   |                           |                          |                                |           |
+|  XGBoost                |                           |                          |                                |           |
 |                   |                           |                          |                                |           |
 |                   |                           |                          |                                |           |
 ## Thank You!
