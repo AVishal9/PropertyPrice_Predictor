@@ -109,7 +109,7 @@ ratiob %>%
 | Model             | Mean Absolute Error (MAE) | Mean Squared Error (MSE) | Root Mean Squared Error (RMSE) | R-Squared |
 |---------------|--------------|-------------------|------------|------------|
 | Linear Regression | 187,846.8                 | 188,307,816,638          | 433,944.5                      | 53.71%    |
-|  XGBoost                |                           |                          |                                |           |
+|  XGBoost          | 164636.4                        |                          |                          | 62.56%    |
 |                   |                           |                          |                                |           |
 |                   |                           |                          |                                |           |
 ## Thank You!
