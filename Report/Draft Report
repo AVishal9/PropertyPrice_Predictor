@@ -148,7 +148,7 @@ Typical RMSE values for XGBoost in real estate datasets can range from $20,000 t
 | Model             | Mean Absolute Error (MAE) | Mean Squared Error (MSE) | Root Mean Squared Error (RMSE) | R-Squared |
 |---------------|--------------|-------------------|------------|------------|
 | Linear Regression | 187,846.8                 | 188,307,816,638          | 433,944.5                      | 53.71%    |
-| XGBoost           |  164636.4                 | 173634154264             | 416694.3                       |  62.56%   |
-|                   |                           |                          |                                |           |
+| XGBoost           | 164,636.4                 | 173634154264             | 416694.3                       | 62.56%   |
+| Lasso Regression  | 0.3695152                 | 0.2285212                | 0.4780390                      | 45.84%    |
 |                   |                           |                          |                                |           |
 

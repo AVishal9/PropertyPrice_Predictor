@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 library(tidyverse)
 library(corrplot)
 library(GGally)
@@ -52,6 +53,67 @@ ggplot(house_data, aes(x = log_land_size)) +
   theme_minimal()
 
 ##Correlation Matrix
+=======
+####
+# Exploratory Data Analysis 
+####
+
+```{r}
+library(tidyverse)
+library(corrplot)
+```
+
+house_data <- readRDS("data_processed/house_data.rds")
+
+```{r}
+#Categorizing houses based on size 
+#Adding a price per square feet variable
+house_data <- house_data %>%
+  mutate(
+    house_size_category = case_when(
+      house_size < 1500 ~ "Small",
+      house_size >= 1500 & house_size <= 2500 ~ "Medium",
+      house_size > 2500 & house_size <= 4000 ~ "Large",
+      house_size > 4000 ~ "Extra-Large"
+    ),
+    price_sqft = price/house_size
+  )
+```
+
+```{r}
+# Drop cases 
+house_data <- house_data %>%
+  filter(land_size > house_size) %>% #Drop obs. where land size is less than house size
+  filter(price > house_size) %>%     #Drop obs. where price is less than house size
+  filter(city != "")                 #Drop obs. with empty city field 
+```
+
+```{r}
+# Histogram for price
+ggplot(house_data, aes(x = price/1000000)) + 
+  geom_histogram(bins = 100, fill = "blue", color = "black")+ 
+  ggtitle("Distribution of House Prices (in M)")+
+  labs(
+    title = "Distribution of House Prices",
+    x = "Price (M USD)",
+    y = "Count"
+  ) +
+  theme_bw()
+  
+# Histogram for house_size
+ggplot(house_data, aes(x = house_size)) + 
+  geom_histogram(bins = 30, fill = "darkgreen", color = "black") +
+  ggtitle("Distribution of House Sizes")+
+  labs(
+    title = "Distribution of House based on Size",
+    x = "Size (sq. feet)",
+    y = "Count"
+  ) +
+  theme_bw()
+```
+##Correlation Matrix
+```{r}
+>>>>>>> a52b11688119bddfedb52df2423ea4278cf6486b
 # Select numeric columns for correlation
 numeric_cols <- house_data %>%
   select_if(is.numeric) %>%                     
@@ -67,6 +129,7 @@ cor_matrix <- cor(numeric_cols, use = "pairwise.complete.obs")
 # Plot correlation heatmap
 corrplot(cor_matrix, method = "color", tl.cex = 0.6, 
          addCoef.col = "white", tl.col = "black")
+<<<<<<< HEAD
 
 
 
@@ -204,3 +267,101 @@ ggplot(state_summary, aes(x = state, y = value, fill = category)) +
   theme_bw() +  # Use theme_bw for a clean, classic look
   theme(axis.text.x = element_text(size = 12, face = "bold"))
   
+=======
+```
+```{r}
+# Categorize price into bins
+house_data <- house_data %>%
+  mutate(
+    price_category = cut(price,
+      breaks = c(0, 250000, 500000, 750000, 1000000, Inf),
+      labels = c("<250K", "250K-500K", "500K-750K", "750K-1M", ">1M")
+    ),
+    density = house_size / land_size,  # House density
+    luxury_property = ifelse(price_sqft > quantile(price_sqft, 0.95), 1, 0)
+  )
+
+# Distribution of House Prices by Categories
+ggplot(house_data, aes(x = price_category, fill = price_category)) +
+  geom_bar(color = "black", alpha = 0.7) +
+  scale_fill_manual(values = c(
+    "<250K" = "darkgreen",
+    "250K-500K" = "lightgreen",
+    "500K-750K" = "yellow",
+    "750K-1M" = "orange",
+    ">1M" = "red"
+  )) +
+  ggtitle("Distribution of House Prices by Price Category") +
+  xlab("Price Category") +
+  ylab("Number of Properties") +
+  theme_bw()
+
+
+```
+
+```{r}
+# Top 5 States with Highest Number of Affordable Houses
+# Define a threshold for affordable price per square foot
+affordable_sqft_threshold <- quantile(house_data$price_sqft, 0.25, na.rm = TRUE)
+
+# Filter for affordable houses based on price per square foot
+affordable_states <- house_data %>%
+  filter(price_sqft <= affordable_sqft_threshold) %>%
+  group_by(state) %>%
+  summarise(
+    affordable_count = n(),
+    avg_affordable_price = mean(price, na.rm = TRUE),
+    avg_price_per_sqft = mean(price_sqft, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(affordable_count)) %>%
+  slice_head(n = 5)
+
+# Plot the updated affordable house counts
+ggplot(affordable_states, aes(x = reorder(state, -affordable_count), y = affordable_count)) +
+  geom_bar(stat = "identity", fill = "steelblue", alpha = 0.7) +
+  geom_text(aes(label = paste0("$", round(avg_affordable_price / 1000, 1), "K")), 
+            vjust = -0.5, color = "black", size = 3) +
+  ggtitle("Top 5 States with Highest Number of Affordable Houses (Based on Price/Sqft)") +
+  xlab("State") +
+  ylab("Number of Affordable Houses") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 14, face = "bold")
+  ) +
+  theme_bw()
+
+```
+
+
+```{r}
+# Top 5 States with Highest Number of Luxury Houses
+luxury_states <- house_data %>%
+  filter(price_category == ">1M") %>%
+  group_by(state) %>%
+  summarise(
+    luxury_count = n(),
+    avg_luxury_price = mean(price, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(luxury_count)) %>%
+  slice_head(n = 5)
+
+ggplot(luxury_states, aes(x = reorder(state, -luxury_count), y = luxury_count)) +
+  geom_bar(stat = "identity", fill = "darkred", alpha = 0.7) +
+  geom_text(aes(label = paste0("$", round(avg_luxury_price / 1000000, 1), "M")), 
+            vjust = -0.5, color = "black", size = 3) +
+  ggtitle("Top 5 States with Highest Number of Luxury Houses") +
+  xlab("State") +
+  ylab("Number of Luxury Houses") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 14, face = "bold")
+  )+
+  theme_bw()
+```
+
+
+>>>>>>> a52b11688119bddfedb52df2423ea4278cf6486b

@@ -2,4 +2,10 @@
 .Rhistory
 .RData
 .Ruserdata
+<<<<<<< HEAD
 data_original/rawdata.csv
+=======
+data_original
+data_processed
+PropertyPrice_Predictor.Rproj
+>>>>>>> a52b11688119bddfedb52df2423ea4278cf6486b
