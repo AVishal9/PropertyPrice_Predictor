@@ -29,6 +29,15 @@ It includes **house_size** which represents size of the house in square feet, re
 
 #### Data Cleaning 
 
+Before proceeding with sampling, we already excluded observations lying outside the 99th percentile to mitigate the impact of extreme outliers. Despite this preprocessing step, certain variables in the dataset exhibited positive skewness:
+
+**Price and House Size:**
+The means of these variables were slightly higher than their respective medians, indicating mild positive skewness.This skewness was attributed to the presence of luxury properties with prices ranging between $3,000 and $4,000 per square foot.
+**Land Size:**
+The mean and median values for land size showed a significant disparity, highlighting substantial skewness in this variable.To address this, we created a subset by excluding observations that significantly deviated from the mean, using a threshold based on a specific number of standard deviations. However, even in this subset, the variables retained a right-tailed distribution.
+
+Given this, we decided to retain the original dataset as it provided a balanced representation of the population, including the high-end luxury properties, which are an integral part of the real estate market.
+
 ```{r pressure, echo=FALSE}
 plot(pressure)
 ```
@@ -83,6 +92,17 @@ Studies in the real estate domain indicate that values of R-squared typically ra
 ### Model: XGBoost
 XG Boost or Xtreme Gradient boosting is an ensemble learning technique i.e. it combines the predictions of multiple individual model to build a predictive model. It’s ability to handle complex relationships in data was the reason, it was chosen to 
 model real estate price predictions.
+
+| Metric                         | Value           |
+|--------------------------------|-----------------|
+| Mean Absolute Error (MAE)      | 164636.4        |
+| Mean Squared Error (MSE)       | 173634154264    |
+| Root Mean Squared Error (RMSE) | 416694.3        |
+| R-Squared                      | 62.56%          |
+
+
+
+
 
 ## Evaluation
 
