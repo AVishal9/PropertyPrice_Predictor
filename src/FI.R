@@ -4,6 +4,7 @@ library(corrplot)
 library(GGally)
 library(scales)
 library(plotly)
+library(glmnet)
 
 # Load the data
 house_data <- readRDS("data_processed/house_data.rds")
@@ -61,141 +62,89 @@ state_dummies <- predict(dummies, newdata = house_data)
 house_data <- cbind(house_data, state_dummies)
 
 
-# 4. Creating New Features
-# Create a new feature: Price per Square Foot 
-house_data <- house_data %>%
-  mutate(price_per_sqft = price / house_size)
-
-# Inspecting the transformed data
-summary(house_data)
-
-# Check for any missing values after transformations
-sum(is.na(house_data))  # Make sure no missing values are left
-
-# Visualize any new features
-ggplot(house_data, aes(x = price_per_sqft)) +
-  geom_histogram(bins = 30, fill = "blue", color = "black") +
-  labs(title = "Distribution of Price per Square Foot")
-
-
-# Select numeric columns for correlation
-numeric_cols <- house_data %>%
-  select_if(is.numeric) %>%                     
-  mutate_if(is.integer, as.numeric) %>%
-  select(-c(h_id, street, zip_code)) # Exclude any non-numeric variables like h_id, street, etc.
-
-# Include the new features in the correlation matrix
-numeric_cols <- numeric_cols %>%
-  select(log_price, log_house_size, log_land_size, price_per_sqft, house_land_interaction, bath, bed, price)
-
-# Compute correlation matrix
-cor_matrix <- cor(numeric_cols, use = "pairwise.complete.obs")
-
-# Plot correlation heatmap
-corrplot(cor_matrix, method = "color", tl.cex = 0.6, addCoef.col = "white", tl.col = "black")
-
-#feature engineering
-
-# Adding interaction features to the dataset
+# Feature Engineering
 house_data <- house_data %>%
   mutate(
-    price_per_bed = ifelse(bed > 0, price / bed, NA),   # Avoid division by zero
-    price_per_bath = ifelse(bath > 0, price / bath, NA), # Avoid division by zero
+    price_per_sqft = price / house_size,                # Price per square foot
     bed_bath_ratio = ifelse(bath > 0, bed / bath, NA),  # Avoid division by zero
-    land_to_house_ratio = land_size / house_size        # Land-to-House Size Ratio
+    land_to_house_ratio = land_size / house_size,       # Land-to-house size ratio
+    bed_bath_interaction = bed * bath,                 # Interaction between number of bedrooms and bathrooms
+    total_rooms = bed + bath,                           # Total number of rooms
+    rooms_size_interaction = total_rooms * house_size   # Interaction between total rooms and house size
   )
 
-# Preview the new features
-summary(house_data %>% select(price_per_bed, price_per_bath, bed_bath_ratio, land_to_house_ratio))
+# Remove rows with missing values created during feature engineering
+house_data <- house_data %>%
+  drop_na()
 
-# Define a function to remove outliers based on IQR
+# Remove outliers based on IQR for 'price' and 'price_per_sqft'
 remove_outliers <- function(data, column) {
   Q1 <- quantile(data[[column]], 0.25, na.rm = TRUE)
   Q3 <- quantile(data[[column]], 0.75, na.rm = TRUE)
   IQR <- Q3 - Q1
-  lower_bound <- Q1 - 1.5 * IQR
-  upper_bound <- Q3 + 1.5 * IQR
   data <- data %>%
-    filter(data[[column]] >= lower_bound & data[[column]] <= upper_bound)
+    filter(data[[column]] >= (Q1 - 1.5 * IQR) & data[[column]] <= (Q3 + 1.5 * IQR))
   return(data)
 }
 
-# Apply the function to remove outliers from 'price' and 'price_per_sqft'
-house_data_clean <- house_data %>%
+house_data <- house_data %>%
   remove_outliers("price") %>%
   remove_outliers("price_per_sqft")
 
-cat("Dataset after removing outliers:\n")
-print(dim(house_data_clean))  # Check the size of the cleaned dataset
 
-
-# Split the cleaned data into train and test sets
+# Split the data into training and testing sets
 set.seed(123)
-train_index <- sample(1:nrow(house_data_clean), size = 0.8 * nrow(house_data_clean))
-train_data_clean <- house_data_clean[train_index, ]
-test_data_clean <- house_data_clean[-train_index, ]
+train_index <- sample(1:nrow(house_data), size = 0.8 * nrow(house_data))
+train_data <- house_data[train_index, ]
+test_data <- house_data[-train_index, ]
 
-x_train_clean <- as.matrix(train_data_clean %>% select(house_size, land_size, bath, bed, price_per_sqft, starts_with("state.")))
-y_train_clean <- train_data_clean$price
+# Prepare features and target for Lasso regression
+# Prepare features and target for Lasso regression (exclude price_per_sqft and house_land_ratio)
+x_train <- train_data %>%
+  select(log_house_size, log_land_size, bed, bath, 
+         bed_bath_ratio, land_to_house_ratio, 
+         bed_bath_interaction, total_rooms, rooms_size_interaction) %>%
+  as.matrix()
 
-x_test_clean <- as.matrix(test_data_clean %>% select(house_size, land_size, bath, bed, price_per_sqft, starts_with("state.")))
-y_test_clean <- test_data_clean$price
+y_train <- train_data$log_price
+
+x_test <- test_data %>%
+  select(log_house_size, log_land_size, bed, bath, 
+         bed_bath_ratio, land_to_house_ratio, 
+         bed_bath_interaction, total_rooms, rooms_size_interaction) %>%
+  as.matrix()
+
+y_test <- test_data$log_price
 
 # Train the Lasso model with cross-validation
-lasso_model_clean <- cv.glmnet(
-  x = x_train_clean,
-  y = y_train_clean,
-  alpha = 1,  # Lasso regression
+# Fine-tune the lambda grid
+lasso_model_fine <- cv.glmnet(
+  x = x_train,
+  y = y_train,
+  alpha = 0.5,  # Lasso regression
   standardize = TRUE,
-  nfolds = 10
+  nfolds = 10,
+  lambda = 10^seq(-4, 1, length = 100)  # Expanded range of lambda values
 )
 
 # Get the best lambda
-best_lambda_clean <- lasso_model_clean$lambda.min
-cat("Best Lambda (Clean Data):", best_lambda_clean, "\n")
+best_lambda_fine <- lasso_model_fine$lambda.min
+cat("Fine-Tuned Best Lambda:", best_lambda_fine, "\n")
 
 # Predict on the test set
-lasso_predictions_clean <- predict(lasso_model_clean, s = best_lambda_clean, newx = x_test_clean)
+lasso_predictions_fine <- predict(lasso_model_fine, s = best_lambda_fine, newx = x_test)
 
-# Calculate RMSE and MSE
-lasso_rmse_clean <- sqrt(mean((lasso_predictions_clean - y_test_clean)^2))
-lasso_mse_clean <- mean((lasso_predictions_clean - y_test_clean)^2)
+# Calculate performance metrics
+rmse_fine <- sqrt(mean((lasso_predictions_fine - y_test)^2))  # RMSE
+mae_fine <- mean(abs(lasso_predictions_fine - y_test))        # MAE
+r_squared_fine <- 1 - sum((lasso_predictions_fine - y_test)^2) / sum((y_test - mean(y_test))^2) # R-squared
 
-cat("Lasso Model RMSE (Clean Data):", lasso_rmse_clean, "\n")
-cat("Lasso Model MSE (Clean Data):", lasso_mse_clean, "\n")
+cat("Fine-Tuned Lasso RMSE:", rmse_fine, "\n")
+cat("Fine-Tuned Lasso MAE:", mae_fine, "\n")
+cat("Fine-Tuned Lasso R-squared:", r_squared_fine, "\n")
 
-# Calculate MAE for the cleaned data
-lasso_mae_clean <- mean(abs(lasso_predictions_clean - y_test_clean))
+plot(lasso_model)
 
-cat("Lasso Model MAE (Clean Data):", lasso_mae_clean, "\n")
-
-
-# Calculate R-squared
-lasso_r_squared_clean <- 1 - sum((lasso_predictions_clean - y_test_clean)^2) /
-  sum((y_test_clean - mean(y_test_clean))^2)
-
-cat("Lasso Model R-squared (Clean Data):", lasso_r_squared_clean, "\n")
-
-# Define the threshold
-threshold <- 200000
-
-# Convert actual and predicted prices into classes
-actual_classes <- ifelse(y_test_clean < threshold, "Affordable", "Luxury")
-predicted_classes <- ifelse(lasso_predictions_clean < threshold, "Affordable", "Luxury")
-
-# Create a confusion matrix
-library(caret)
-confusion_matrix <- confusionMatrix(as.factor(predicted_classes), as.factor(actual_classes))
-
-# Extract the table from the confusion matrix
-conf_matrix_table <- as.table(confusion_matrix$table)
-
-# Plot the confusion matrix as a heatmap
-library(ggplot2)
-ggplot(data = as.data.frame(conf_matrix_table), aes(x = Prediction, y = Reference)) +
-  geom_tile(aes(fill = Freq), color = "white") +
-  geom_text(aes(label = Freq), vjust = 1) +
-  scale_fill_gradient(low = "lightblue", high = "darkblue") +
-  labs(title = "Confusion Matrix Heatmap", x = "Predicted Class", y = "Actual Class") +
-  theme_minimal()
+coefficients <- coef(lasso_model_fine, s = best_lambda_fine)
+print(coefficients)
 
