@@ -98,7 +98,7 @@ ratiob %>%
 
 ## Models 
 
-- Linear Regression 
+- Linear Regression - 
 - Random Forest 
 - XGBoost 
 
@@ -109,7 +109,23 @@ ratiob %>%
 | Model             | Mean Absolute Error (MAE) | Mean Squared Error (MSE) | Root Mean Squared Error (RMSE) | R-Squared |
 |---------------|--------------|-------------------|------------|------------|
 | Linear Regression | 187,846.8                 | 188,307,816,638          | 433,944.5                      | 53.71%    |
-|  XGBoost          | 164636.4                        |                          |                          | 62.56%    |
+| XGBoost           | 164636.4                  | 173634154264             | 416,694.3                      | 62.56%    |
 |                   |                           |                          |                                |           |
 |                   |                           |                          |                                |           |
+
+
+•	Limitations/Problems 
+
+-	No unique ID in the dataset.
+-	High cardinality of categorical variables increased the dimensionality of the data 
+-	High variance in the dataset as it is not particularly for residential real estate, therefore huge outliers in terms of land size.
+- Can be complemented with data on market dynamics
+
+
+
+
+
+
+
+
 ## Thank You!
