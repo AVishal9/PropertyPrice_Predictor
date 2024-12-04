@@ -1,0 +1,319 @@
+######
+#Estimating the model
+#####
+
+# Estimating the Linear Regression model, to establish a base level performance
+# We will begin by building a linear regression model using Forward selection 
+
+#Excluding unique_ID as it is not needed for estimating the model
+
+train_data <- train_data  %>%
+  dplyr::select(-"unique_id") # customer_ID is excluded for the model estimation, since it is not needed for the model
+
+# Forward Selection of Regressors
+
+# Setting up a variable 'regressors' that contains all regressors except the dependent variable
+names(train_data) <- gsub(" ", "_", names(train_data))  # Replacing spaces in column names with underscores
+regressors <- names(train_data)[names(train_data)!="price"]
+
+# Beginning with a null model i.e. with only intercept
+current_model <- lm(as.formula(paste("price ~ 1")), data = train_data) # intercept-only model
+selected_regressors <- c() # Empty list to store the selected predictor
+remaining_regressors <- regressors # Regressors that still need to be evaluated
+best_model <- current_model
+best_rss <- sum(residuals(best_model)^2) # Compute RSS for the intercept-only model
+
+# Forward selection process
+for (i in seq_along(regressors)) {
+  # Evaluate each remaining predictor
+  potential_models <- lapply(remaining_regressors, function(pred) {
+    lm(as.formula(paste("price ~", paste(c(selected_regressors, pred), collapse = "+"))), 
+       data = train_data)
+  })
+  
+  # Calculate RSS for each candidate model
+  rss_values <- sapply(potential_models, function(model) {
+    sum(residuals(model)^2)
+  })
+  
+  # Find the predictor that gives the lowest RSS
+  best_model_index <- which.min(rss_values)
+  
+  # Select the predictor with the lowest RSS if it improves the model
+  if (length(rss_values) > 0 && rss_values[best_model_index] < best_rss) {
+    selected_regressors <- c(selected_regressors, remaining_regressors[best_model_index])
+    remaining_regressors <- remaining_regressors[-best_model_index]
+    best_model <- potential_models[[best_model_index]]
+    best_rss <- rss_values[best_model_index]
+    print(paste("Added predictor:", selected_regressors[length(selected_regressors)]))
+  } else {
+    break # Stops if there is no improvement in RSS
+  }
+}
+
+# Final model
+feature_selection <- summary(best_model)
+
+# The R-squared of the best model is 0.5058(penalty for the number of regressors)
+#The forward selection process found a model with 96 regressors, more than half of which aren't statistically significant
+# They also do not add a lot to the model theoretically. Therefore, the regressors which aren't satistically significant will be removed
+# As most of those are categorical variables, therefore by removing them the model will be simplified and overfitting reduced.
+
+# Regressors that are statistically significant above 0.01 level - house_size, state_california, bath, brokered_by_16829, state_Washington
+# state_Florida               
+# state_Massachusetts        
+# state_Hawaii                
+# state_Arizona               
+# state_Oregon                
+# state_New_York              
+# bed                        
+# state_District_of_Columbia  
+# state_Idaho                
+# city_Los_Angeles           
+# street_399376              
+# state_New_Jersey            
+# state_Nevada                
+# state_Colorado              
+# city_Sacramento           
+# state_Utah                  
+# land_size                   
+# state_Montana               
+# status_for_sale             
+# state_Rhode_Island          
+# city_Dallas                 
+# brokered_by_22611           
+# city_Philadelphia  
+# sale_frequency
+# zip_code_77008
+# zip_code_95648
+# city_Chicago
+# city_Charlotte
+# city_other
+# city_Saint_Louis
+
+# Eliminating regressors based on statistical significance left us with 31 regressors
+
+final_regressors <-c("house_size", "bath","state_California", 
+                     "brokered_by_16829", "state_Washington", "state_Florida", "state_Massachusetts","state_Hawaii", "state_Arizona"               
+                  ,"state_Oregon", "state_New_York", "bed", "state_District_of_Columbia","state_Utah","land_size" ,"state_Montana",
+                   "state_Idaho","city_Los_Angeles","street_399376","state_New_Jersey","state_Nevada","state_Colorado" ,"city_Sacramento"           
+                  ,"status_for_sale ","state_Rhode_Island","city_Dallas","brokered_by_22611 ","city_Philadelphia", "sale_frequency",               
+                   "zip_code_77008","city_Charlotte")       
+                  
+
+#Model 1: linear-linear relationship 
+
+#Visualizing the relationship
+plot(train_data$house_size, train_data$price)
+plot(train_data$land_size, train_data$price) #The plots possibly show an Exponential Relationship between the regressors and price
+
+lm1 <- lm(as.formula(paste("price ~", paste(final_regressors, collapse = "+"))), data = train_data)
+summary(lm1)
+
+#The residual standard err0r is 303,800,on 19864 degrees of freedom. 
+#On average, the predictions of lm1 model are off by approximately $303,800 from the actual prices.
+#The R squared is 49.94%
+#There is still room for improvement
+
+# Plotting to check residuals
+par(mfrow=c(2,2))
+plot(lm1)
+
+# Model 2: Model with Log-linear relationship 
+plot(log(train_data$house_size), log(train_data$price), 
+     xlab = "House Size", ylab = "Log of Price", main = "Log(Price) vs House Size")
+plot(train_data$land_size, log(train_data$price), 
+     xlab = "Land Size", ylab = "Log of Price", main = "Log(Price) vs Land Size")
+
+lm2 <- lm(as.formula(paste("log(price) ~",paste(final_regressors, collapse = "+"))), data = train_data)
+summary(lm2)
+
+#R-squared is 59.3% whileresidual standard error is 0.4627
+
+# Plotting to check residuals
+par(mfrow=c(2,2))
+plot(lm2)
+
+
+
+# Model 3: Model with Log-Log relationship 
+
+# Visualing the relationships between regressors using log-log scatterplot.
+plot(log(train_data$house_size), log(train_data$price), 
+     xlab = "Log of House Size", ylab = "Log of Price", main = "Log-Log Model")
+plot(log(train_data$land_size), log(train_data$price), 
+     xlab = "Log of Land Size", ylab = "Log of Price", main = "Log-Log Model") 
+
+# From the scatterplots it is evident that land and price share an additive realtionship while, house size and price share
+# a multiplicative relationship.
+
+final_regressors2 <-c ("bath","state_California", 
+                     "brokered_by_16829", "state_Washington", "state_Florida", "state_Massachusetts","state_Hawaii", "state_Arizona"               
+                     ,"state_Oregon", "state_New_York", "bed", "state_District_of_Columbia","state_Utah","land_size" ,"state_Montana",
+                     "state_Idaho","city_Los_Angeles","street_399376","state_New_Jersey","state_Nevada","state_Colorado" ,"city_Sacramento"           
+                     ,"status_for_sale ","state_Rhode_Island","city_Dallas","brokered_by_22611 ","city_Philadelphia", "sale_frequency",               
+                     "zip_code_77008","city_Charlotte")   
+
+lm3 <- lm(as.formula(paste("log(price) ~ log(house_size)+", paste(final_regressors2, collapse = "+"))), data = train_data)
+summary(lm3)
+
+#This model is the best out of the 3 models tested, the r squared is 60.34% while the residual standard error is 0.4568 which is the 
+#least out of the three
+
+# Plotting to check residuals
+par(mfrow=c(2,2))
+plot(lm3)
+
+
+
+# Plotting to check residuals
+par(mfrow=c(2,2))
+plot(lm3)
+library(sandwich)
+bptest(lm3) #Reject the null hypothesis, the errors are still heterosckedastic
+robust_se <- coeftest(lm3, vcov = vcovHC(lm3, type = "HC1"))
+print(robust_se)
+
+# The deviations suggest a non-linearity in the model
+# There are some outliers that might have an impact on the model. See if they change when I use the other data.
+# The residuals indicate non-linearity
+# Normality of residuals: The Q-Q plot indicates, the Q-Q plot is close to the dotted line indicating it is normally distributed
+# Just the tails are a bit further indicating presence of outliers(try it with balanced data).
+
+# Prediction using test data 
+# Interpretation 1% increase in house_size results in a 0.5% increase in price as a log-log model is used
+names(test_data) <- gsub(" ", "_", names(test_data))  # Replacing spaces in column names with underscores
+predicted_price <- exp(predict(lm3, newdata = test_data))
+
+# Accuracy of chosen models
+actuals <- test_data$price
+
+# Calculating relevant metrics
+MAE <- mean(abs(predicted_price - actuals))
+MSE <- mean((predicted_price - actuals)^2)
+RMSE <- sqrt(MSE)
+R2 <- cor(predicted_price, actuals)^2
+
+cat("MAE:", MAE, "\nMSE:", MSE, "\nRMSE:", RMSE, "\nR2:", R2)
+
+# MAE - On average, the model's prediction are off by $167,828.6. 
+# RMSE - On average, the model is $307,188.3 off per prediction.
+# RMSE > MAE suggests that large prediction errors exist, which may be caused by outliers or skewed data.
+
+#Plotting actual vs predicted price
+plot(actuals, predicted_price, main = "Predictions vs Actuals",
+     xlab = "Actual Values", ylab = "Predicted Values", pch = 20)
+abline(0, 1, col = "red")
+
+  
+# The model appears to consistently underpredict higher house prices, 
+# suggesting it might not adequately capture complex relationships or rare, high-priced observations.
+# a little data transformation needed
+
+
+####
+# XG boost: Trained and tested with house_data.rds
+####
+
+  
+install.packages("xgboost")
+library(xgboost)
+
+new_data <- readRDS("house_data.rds")
+
+new_data <- new_data %>%
+            dplyr::select(-"bed_category",-"house_size_category",-"bath_category",-"h_id")%>%
+            dplyr::mutate(acre_lot = acre_lot *43560)
+
+#label encode categorical variables 
+new_data$city <- as.integer(new_data$city)
+new_data$state <- as.integer(new_data$state)
+
+#creating an index to split the dataset into training dataset (70%)
+Index <- createDataPartition(
+  y = new_data$price, 
+  p = .70, # The percentage of data in the training set
+  list = FALSE # The format of the results
+)
+
+#splitting into training and test dataset using the Index created above
+TrainData <- new_data[Index,]
+TestData  <- new_data[-Index,]
+
+# Separate the features and target variables 
+# And dropping features that are not necessary for model estimation
+x_train <- as.matrix(TrainData %>%
+            dplyr::select(-price)) # Exclude target variable
+
+  
+y_train <- TrainData$price
+
+x_test <- as.matrix(TestData %>%
+                      dplyr::select(-price))
+y_test <- TestData$price
+
+# Convert data into DMatrix, a special format for XGBoost
+dtrain <- xgb.DMatrix(data = x_train, label = y_train)
+dtest <- xgb.DMatrix(data = x_test, label = y_test) 
+
+
+
+# Define hyperparameters for XGBoost
+params <- list(
+  objective = "reg:squarederror",  # Regression objective
+  eta = 0.1,                      # Learning rate
+  max_depth = 6,                  # Maximum depth of trees
+  subsample = 0.8,                # Subsample ratio of the training instances
+  colsample_bytree = 0.8,         # Subsample ratio of columns when constructing each tree
+  nthread = 2                     # Number of threads to use
+)
+
+# Train the model
+set.seed(125)
+
+cv_results <- xgb.cv(
+  params = params,
+  data = dtrain,
+  nrounds = 150,                  # Number of boosting rounds
+  nfold = 5,                      # Number of folds (k-fold cross-validation)
+  showsd = TRUE,                  # Show standard deviation of the performance metric
+  stratified = TRUE,              # Stratify folds if necessary
+  print_every_n = 10,             # Print progress every 10 rounds
+  early_stopping_rounds = 10      # Stop early if there's no improvement after 10 rounds
+)
+
+# Get the best number of boosting rounds
+best_nrounds <- cv_results$best_iteration
+cat("Best number of boosting rounds:", best_nrounds, "\n")
+
+# Train the model with the best number of boosting rounds
+xgb_model_cv <- xgb.train(
+  params = params,
+  data = dtrain,
+  nrounds = best_nrounds
+)
+
+# Predict on test data
+y_pred_cv <- predict(xgb_model_cv, newdata = dtest)
+
+# Calculate evaluation metrics
+mae_cv <- mean(abs(y_pred_cv - TestData$price))
+mse_cv <- mean((y_pred_cv - TestData$price)^2)
+rmse_cv <- sqrt(mse_cv)
+r2_cv <- 1 - (sum((TestData$price - y_pred_cv)^2) / sum((TestData$price - mean(TestData$price))^2))
+
+# Print evaluation metrics
+cat("Mean Absolute Error (MAE):", mae_cv, "\n") #179813.3
+cat("Mean Squared Error (MSE):", mse_cv, "\n")
+cat("Root Mean Squared Error (RMSE):", rmse_cv, "\n") #413160.5
+cat("R-squared (R2):", r2_cv, "\n") #53.22%
+
+
+
+
+
+
+
+
+
+
