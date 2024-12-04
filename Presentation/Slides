@@ -15,8 +15,6 @@ runtime: shiny
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-## Relevance of Data-driven approach in Real Estate
-
 ```{r eruptions}
 inputPanel(
   selectInput("n_breaks", label = "Number of bins:",
@@ -52,9 +50,9 @@ renderPlot({
 
 ## About the Data: Source & Characteristics
 
--   The dataset 
--   Bullet 2
--   Bullet 3
+-   The original dataset was a csv file containing real estate listings in the USA categorised by states, city and zipcode.
+-   Includes 12 different features and more than 2 million entries 
+-   The data had 6 categorical variables some of which were highly cardinal.
 
 ## Data Cleaning: Before Sampling 
 
