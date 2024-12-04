@@ -167,11 +167,10 @@ ggplot(state_avg_price, aes(x = avg_price, y = reorder(state, avg_price), fill =
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate x-axis labels for better readability
 
-library(tidyverse)
-
 # Filter the data for the three states
 selected_states <- house_data %>%
-  filter(state %in% c("Ohio", "Texas", "California"))
+  filter(state %in% c("Ohio", "Texas", "California")) %>%
+  mutate(price_per_sqft = price / house_size)  # Calculate price_per_sqft after filtering
 
 # Summarize data to calculate Affordable (<50%) and Luxury (>90%) price per square foot
 state_summary <- selected_states %>%
