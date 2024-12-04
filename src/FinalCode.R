@@ -798,7 +798,7 @@ dataxg$h_id <- seq_len(nrow(dataxg))
 
 #Remove categorical variables
 stratified_sample2 <- dataxg %>% 
-  dplyr::select(-house_size_category, -bath_category, -bed_category)
+  dplyr::select(-house_size_category, -bath_category, -bed_category, -h_id, -sale_frequency) #Excluding unimportant features
 
 # To ensure unit consistency converting acres into square feet
 # and changing the feature name to land_size
@@ -806,14 +806,21 @@ stratified_sample2 <- stratified_sample2 %>%
   mutate(land_size = acre_lot *43560) %>%
   dplyr::select(-acre_lot)
 
-#label encode categorical variables 
-stratified_sample2$city <- as.integer(stratified_sample2$city)
-stratified_sample2$state <- as.integer(stratified_sample2$state)
+
+
+# label encode categorical variables 
+# Extract column names that are not numeric
+categorical <- names(stratified_sample2)[sapply(stratified_sample2, function(x) !is.numeric(x))]
+
+# Convert these columns to factor (equivalent of Pandas 'category')
+stratified_sample2[categorical] <- lapply(stratified_sample2[categorical], as.factor)
+stratified_sample2[categorical] <- lapply(stratified_sample2[categorical], as.integer) #without this I was getting a warning message NAs introduced by coercion
+
 
 #creating an index to split the dataset into training dataset (70%)
 Index <- createDataPartition(
   y = stratified_sample2$price, 
-  p = .70, # The percentage of data in the training set
+  p = .80, # The percentage of data in the training set
   list = FALSE # The format of the results
 )
 
@@ -822,7 +829,6 @@ TrainData <- stratified_sample2[Index,]
 TestData  <- stratified_sample2[-Index,]
 
 # Separate the features and target variables 
-# And dropping features that are not necessary for model estimation
 x_train <- as.matrix(TrainData %>%
                     dplyr::select(-price)) # Exclude target variable
 
@@ -836,40 +842,142 @@ y_test <- TestData$price
 dtrain <- xgb.DMatrix(data = x_train, label = y_train)
 dtest <- xgb.DMatrix(data = x_test, label = y_test) 
 
-
-# Define hyperparameters for XGBoost
-params <- list(
-  objective = "reg:squarederror",  # Regression objective
-  eta = 0.1,                      # Learning rate
-  max_depth = 6,                  # Maximum depth of trees
-  subsample = 0.8,                # Subsample ratio of the training instances
-  colsample_bytree = 0.8,         # Subsample ratio of columns when constructing each tree
-  nthread = 2                     # Number of threads to use
+###
+#Training the XGBoost model using hyperparameters using grid search & CV
+###
+set.seed(1)
+# Define hyperparameters for XGBoost using grid search 
+param_grid <- expand.grid(
+  max_depth = c(3, 5, 7),
+  eta = c(0.01, 0.1, 0.2),
+  subsample = c(0.6, 0.8, 1.0),
+  colsample_bytree = c(0.6, 0.8, 1.0)
 )
 
-# Train the model
-set.seed(125)
 
-cv_results <- xgb.cv(
-  params = params,
-  data = dtrain,
-  nrounds = 150,                  # Number of boosting rounds
-  nfold = 5,                      # Number of folds (k-fold cross-validation)
-  showsd = TRUE,                  # Show standard deviation of the performance metric
-  stratified = TRUE,              # Stratify folds if necessary
-  print_every_n = 10,             # Print progress every 10 rounds
-  early_stopping_rounds = 10      # Stop early if there's no improvement after 10 rounds
+# Variables to store results
+best_rmse <- Inf
+best_params <- NULL
+
+# Loop through parameter grid
+for (i in 1:nrow(param_grid)) {
+  params <- list(
+    objective = "reg:squarederror",
+    eta = param_grid[i, "eta"],
+    max_depth = param_grid[i, "max_depth"],
+    subsample = param_grid[i, "subsample"],
+    colsample_bytree = param_grid[i, "colsample_bytree"]
+  )
+  
+# Performing  cross-validation on training dataset
+  cv_results <- xgb.cv(
+    params = params,
+    data = dtrain,
+    nrounds = 150,
+    nfold = 5,
+    metrics = "rmse",
+    early_stopping_rounds = 10,
+    verbose = 0
+  )
+  
+# Tracking the best parameters
+  mean_rmse <- min(cv_results$evaluation_log$test_rmse_mean)
+  if (mean_rmse < best_rmse) {
+    best_rmse <- mean_rmse
+    best_params <- params
+  }
+}
+
+# Best parameters and RMSE
+print(best_params) 
+# eta - 0.1, max_depth - 5, subsample - 1, colsample_bytree - 0.6 
+#Best params after removing unimportant variables -  eta - 0.1, max_depth - 5, subsample - 1, colsample_bytree - 0.8
+#Including state and city but converting them to factors 
+#eta - 0.1, max_depth - 7, subsample - 1, colsample_bytree - 0.6 
+#eta - 0.2, max_depth - 7, subsample - 0.8, colsample_bytree - 0.6 
+#eta - 0.1, max_depth - 7, subsample - 1, colsample_bytree - 0.6 
+
+
+print(best_rmse) 
+#476,116.5
+#Best RMSE after removing unimportant variables - 403728.1
+#Including state and city but converting them to factors -  423923
+#439991.7
+#444862.2
+
+####
+# Training the model using 5 fold cross-validation after Random search
+####
+
+set.seed(42)
+
+# Generate random parameter combinations
+param_samples <- data.frame(
+  max_depth = sample(3:7, 10, replace = TRUE),
+  eta = runif(10, 0.01, 0.3),
+  subsample = runif(10, 0.6, 1.0),
+  colsample_bytree = runif(10, 0.6, 1.0)
 )
 
-# Get the best number of boosting rounds
-best_nrounds <- cv_results$best_iteration
-cat("Best number of boosting rounds:", best_nrounds, "\n")
+best_rmse_RS <- Inf
+best_params_RS <- NULL
 
-# Train the model with the best number of boosting rounds
+for (i in 1:nrow(param_samples)) {
+  params_RS <- list(
+    objective = "reg:squarederror",
+    eta = param_samples[i, "eta"],
+    max_depth = param_samples[i, "max_depth"],
+    subsample = param_samples[i, "subsample"],
+    colsample_bytree = param_samples[i, "colsample_bytree"]
+  )
+  
+  cv_results_RS <- xgb.cv(
+    params_RS = params_RS,
+    data = dtrain,
+    nrounds = 150,
+    nfold = 5,
+    metrics = "rmse",
+    early_stopping_rounds = 10,
+    verbose = 0
+  )
+  
+  mean_rmse <- min(cv_results_RS$evaluation_log$test_rmse_mean)
+  if (mean_rmse < best_rmse_RS) {
+    best_rmse_RS <- mean_rmse
+    best_params_RS <- params_RS
+  }
+}
+
+#Printing the best parameter from Random Search
+print(best_params_RS) 
+#eta = 0.2721691, max_depth = 4, subsample = 0.895, colsample_bytree = 0.7518
+#Best params after removing unimportant variables -  eta - 0.1440649, max_depth - 3, subsample - 0.632975, colsample_bytree - 0.6015793
+#Including state and city but converting them to factors 
+#eta - 0.1440649, max_depth - 3, subsample - 0.632975, colsample_bytree - 0.6015793
+#eta - 0.05022595, max_depth - 4, subsample - 0.9244221, colsample_bytree - 0.7743086
+print(best_rmse_RS) 
+#513,969.8
+#Best RMSE after removing unimportant variables - 412468.6
+#Including state and city but converting them to factors  - 458507.6
+#Including state and city but converting them to factors  - 451387.3
+
+###
+# Training on the Final Model
+###
+
+# The Grid Search had the lower RMSE so we will evaluate the final model using those parameters 
+final_params <- list(objective = "reg:squarederror",
+                     eta = 0.1,
+                     max_depth = 7,
+                     subsample = 1,
+                     colsample_bytree = 0.6) 
+
+# Train the model with the 72 boosting rounds
+
 xgb_model_cv <- xgb.train(
-  params = params,
+  params = final_params,
   data = dtrain,
-  nrounds = best_nrounds
+  nrounds = 150
 )
 
 # Predict on test data
@@ -882,12 +990,34 @@ rmse_cv <- sqrt(mse_cv)
 r2_cv <- 1 - (sum((TestData$price - y_pred_cv)^2) / sum((TestData$price - mean(TestData$price))^2))
 
 # Print evaluation metrics
-cat("Mean Absolute Error (MAE):", mae_cv, "\n") #179813.3
-cat("Mean Squared Error (MSE):", mse_cv, "\n")
-cat("Root Mean Squared Error (RMSE):", rmse_cv, "\n") #413160.5
-cat("R-squared (R2):", r2_cv, "\n") #53.22%
+cat("Mean Absolute Error (MAE):", mae_cv, "\n") #179813.3  #3rd:173344.4 
+cat("Mean Squared Error (MSE):", mse_cv, "\n")              #3rd:241426162964 
+cat("Root Mean Squared Error (RMSE):", rmse_cv, "\n") #413160.5 #3rd:491351.4 
+cat("R-squared (R2):", r2_cv, "\n") #53.22%  #3rd:54.47%
 
-#hyper tune this model
+#checking the important features in the model 
+importance <- xgb.importance(model = xgb_model_cv) #bath, house size, zip_code, street, land_size, bed)
+
+
+#Final XGBoost model 
+
+#param (eta = 0.1,
+#max_depth = 7,
+#subsample = 1,
+#colsample_bytree = 0.6) #Found using grid search 
+
+#MAE:164636.4 
+#MSE:173634154264 
+#RMSE:416694.3 
+#R^2:0.625686 
+
+#Number of iterations - 150
+
+
+
+
+  
+
 
 
 
