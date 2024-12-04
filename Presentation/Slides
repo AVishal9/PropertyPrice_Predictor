@@ -44,8 +44,11 @@ renderPlot({
 
 
 ## Relevance of Data-driven approach in Real Estate
- The real - estate market is inherently dynamic and prone to fluctuations which impacts wide variety of stakeholder.
-     Use of data to predict real estate prices:
+ The real - estate market is inherently dynamic and prone to fluctuations that impacts a diverse range of stakeholder. Leveraging machine learning techniques offers following over traditional methods give us following advantages :
+
+ - Ability to Handle Large Datasets
+ - Modeling Complex Relationships
+ - Improved Accuracy and Insights
 
 ## About the Data: Source & Characteristics
 
@@ -99,7 +102,7 @@ ratiob %>%
 
 ## Models 
 
-- Linear Regression - 
+- Linear Regression 
 - Random Forest 
 - XGBoost 
 
