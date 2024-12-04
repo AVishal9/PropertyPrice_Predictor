@@ -21,11 +21,11 @@ The real estate market is inherently dynamic and prone to fluctuations which imp
 
 ## About the Dataset
 
-#### Source
+#### Source and Features
 
-```{r cars}
-summary(cars)
-```
+The original dataset was sourced from kaggle.It was a csv file consisting of 2,226,382 observation representing real estate listings in the United States. The data is categorized by various attributes, including state, city, and ZIP code.The dataset had 12 features in total out of which 6 variables were categorical columns - **Brokered by** , **Status**, **Street**, **city**, **state** and **zip_code**. Brokered by and street were numerically encoded for privacy purposes. Our target variable **Price** represents the sale price of a property in dollars.
+It includes **house_size** which represents size of the house in square feet, representing the living space or building area while **acre_lot** refers to the total land area of the property. In case the property has been sold previously, the column **previously sold date** includes a date, otherwise it is Null.The data on real estate was originally parsed from Realtor.com, a prominent real estate listing website in the USA.
+
 
 #### Data Cleaning 
 
@@ -40,7 +40,7 @@ plot(pressure)
 
 ## Models
 
-**Model: Linear Regression**
+### Model: Linear Regression
 
 Linear regression was chosen as the baseline model for this project due to its simplicity and effectiveness, as evidenced by the literature. It is widely recognized in the real estate domain for its low prediction error when capturing relationships between features and target variable i.e. price. However, despite its merits, this model was not a perfect fit for the dataset at hand due to the potential issue of high cardinality among categorical variables, which if one hot encoded would lead to p \> n (variables \> observations)
 
@@ -73,11 +73,16 @@ RMSE: On average, the model exhibits a deviation of \$433,944.5 per prediction. 
 
 MSE: The high value of the MSE suggests that outliers are significantly influencing the results,which consistent the observations from the Q-Q plots.
 
-R-Squared: The value of 53.71% falls within the acceptable range for real estate price prediction, particularly for high-variance datasets like this one.
+R-Squared: The model explains 53.71% variability seen in the target value.
 
 **Comparison to Benchmark Values**
 
 Studies in the real estate domain indicate that values of R-squared typically range between 0.40 and 0.80. Simpler models applied to high-variance datasets often yield values in the lower range. For real estate models in expensive markets such as New York City or San Francisco, RMSE greater than \$100,000 are common due to high property values. In light of these benchmarks, the performance of the baseline linear regression model aligns with expectations for real estate price prediction using datasets with significant variance.
+
+
+### Model: XGBoost
+XG Boost or Xtreme Gradient boosting is an ensemble learning technique i.e. it combines the predictions of multiple individual model to build a predictive model. It’s ability to handle complex relationships in data was the reason, it was chosen to 
+model real estate price predictions.
 
 ## Evaluation
 
