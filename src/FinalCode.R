@@ -973,7 +973,7 @@ final_params <- list(objective = "reg:squarederror",
                      colsample_bytree = 0.6) 
 
 # Train the model with the 72 boosting rounds
-
+set.seed(17)
 xgb_model_cv <- xgb.train(
   params = final_params,
   data = dtrain,
