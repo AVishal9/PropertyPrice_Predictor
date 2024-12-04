@@ -135,15 +135,29 @@ cat("Fine-Tuned Best Lambda:", best_lambda_fine, "\n")
 lasso_predictions_fine <- predict(lasso_model_fine, s = best_lambda_fine, newx = x_test)
 
 # Calculate performance metrics
-rmse_fine <- sqrt(mean((lasso_predictions_fine - y_test)^2))  # RMSE
-mae_fine <- mean(abs(lasso_predictions_fine - y_test))        # MAE
+# Calculate performance metrics
+mse_fine <- mean((lasso_predictions_fine - y_test)^2)  # Mean Squared Error (MSE)
+rmse_fine <- sqrt(mse_fine)                           # Root Mean Squared Error (RMSE)
+mae_fine <- mean(abs(lasso_predictions_fine - y_test)) # Mean Absolute Error (MAE)
 r_squared_fine <- 1 - sum((lasso_predictions_fine - y_test)^2) / sum((y_test - mean(y_test))^2) # R-squared
 
+# Print metrics
+cat("Fine-Tuned Lasso MSE:", mse_fine, "\n")
 cat("Fine-Tuned Lasso RMSE:", rmse_fine, "\n")
 cat("Fine-Tuned Lasso MAE:", mae_fine, "\n")
 cat("Fine-Tuned Lasso R-squared:", r_squared_fine, "\n")
 
-plot(lasso_model)
+# Store metrics in a data frame
+results <- data.frame(
+  Metric = c("MSE", "RMSE", "MAE", "R-Squared"),
+  Value = c(mse_fine, rmse_fine, mae_fine, r_squared_fine)
+)
+
+# Print the results data frame
+print(results)
+
+
+plot(lasso_model_fine)
 
 coefficients <- coef(lasso_model_fine, s = best_lambda_fine)
 print(coefficients)
