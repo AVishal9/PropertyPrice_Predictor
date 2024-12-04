@@ -66,19 +66,6 @@ house_data <- cbind(house_data, state_dummies)
 house_data <- house_data %>%
   mutate(price_per_sqft = price / house_size)
 
-# Check the structure of the dataset after adding the new features
-str(house_data)
-
-
-# 6. Detecting and Removing Outliers
-# For example, let's detect and remove outliers using the IQR method for 'price'
-Q1 <- quantile(house_data$log_price, 0.25, na.rm = TRUE)
-Q3 <- quantile(house_data$log_price, 0.75, na.rm = TRUE)
-IQR <- Q3 - Q1
-outlier_limit <- 1.5 * IQR
-house_data <- house_data %>%
-  filter(log_price >= (Q1 - outlier_limit) & log_price <= (Q3 + outlier_limit))
-
 # Inspecting the transformed data
 summary(house_data)
 
@@ -107,80 +94,108 @@ cor_matrix <- cor(numeric_cols, use = "pairwise.complete.obs")
 # Plot correlation heatmap
 corrplot(cor_matrix, method = "color", tl.cex = 0.6, addCoef.col = "white", tl.col = "black")
 
-# Train a linear regression model with log-transformed variables
-log_model <- lm(log_price ~ log_house_size + log_land_size + bath + bed + price_per_sqft, data = house_data)
+#feature engineering
 
-# Summarize the log-transformed model
-summary(log_model)
+# Adding interaction features to the dataset
+house_data <- house_data %>%
+  mutate(
+    price_per_bed = ifelse(bed > 0, price / bed, NA),   # Avoid division by zero
+    price_per_bath = ifelse(bath > 0, price / bath, NA), # Avoid division by zero
+    bed_bath_ratio = ifelse(bath > 0, bed / bath, NA),  # Avoid division by zero
+    land_to_house_ratio = land_size / house_size        # Land-to-House Size Ratio
+  )
 
-# Predict the log-transformed price
-log_predictions <- predict(log_model, house_data)
+# Preview the new features
+summary(house_data %>% select(price_per_bed, price_per_bath, bed_bath_ratio, land_to_house_ratio))
 
-# Calculate RMSE (Root Mean Squared Error)
-log_residuals <- log_predictions - house_data$log_price
-log_rmse <- sqrt(mean(log_residuals^2))
-cat("Log Model RMSE:", log_rmse, "\n")
+# Define a function to remove outliers based on IQR
+remove_outliers <- function(data, column) {
+  Q1 <- quantile(data[[column]], 0.25, na.rm = TRUE)
+  Q3 <- quantile(data[[column]], 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  lower_bound <- Q1 - 1.5 * IQR
+  upper_bound <- Q3 + 1.5 * IQR
+  data <- data %>%
+    filter(data[[column]] >= lower_bound & data[[column]] <= upper_bound)
+  return(data)
+}
+
+# Apply the function to remove outliers from 'price' and 'price_per_sqft'
+house_data_clean <- house_data %>%
+  remove_outliers("price") %>%
+  remove_outliers("price_per_sqft")
+
+cat("Dataset after removing outliers:\n")
+print(dim(house_data_clean))  # Check the size of the cleaned dataset
+
+
+# Split the cleaned data into train and test sets
+set.seed(123)
+train_index <- sample(1:nrow(house_data_clean), size = 0.8 * nrow(house_data_clean))
+train_data_clean <- house_data_clean[train_index, ]
+test_data_clean <- house_data_clean[-train_index, ]
+
+x_train_clean <- as.matrix(train_data_clean %>% select(house_size, land_size, bath, bed, price_per_sqft, starts_with("state.")))
+y_train_clean <- train_data_clean$price
+
+x_test_clean <- as.matrix(test_data_clean %>% select(house_size, land_size, bath, bed, price_per_sqft, starts_with("state.")))
+y_test_clean <- test_data_clean$price
+
+# Train the Lasso model with cross-validation
+lasso_model_clean <- cv.glmnet(
+  x = x_train_clean,
+  y = y_train_clean,
+  alpha = 1,  # Lasso regression
+  standardize = TRUE,
+  nfolds = 10
+)
+
+# Get the best lambda
+best_lambda_clean <- lasso_model_clean$lambda.min
+cat("Best Lambda (Clean Data):", best_lambda_clean, "\n")
+
+# Predict on the test set
+lasso_predictions_clean <- predict(lasso_model_clean, s = best_lambda_clean, newx = x_test_clean)
+
+# Calculate RMSE and MSE
+lasso_rmse_clean <- sqrt(mean((lasso_predictions_clean - y_test_clean)^2))
+lasso_mse_clean <- mean((lasso_predictions_clean - y_test_clean)^2)
+
+cat("Lasso Model RMSE (Clean Data):", lasso_rmse_clean, "\n")
+cat("Lasso Model MSE (Clean Data):", lasso_mse_clean, "\n")
+
+# Calculate MAE for the cleaned data
+lasso_mae_clean <- mean(abs(lasso_predictions_clean - y_test_clean))
+
+cat("Lasso Model MAE (Clean Data):", lasso_mae_clean, "\n")
+
 
 # Calculate R-squared
-log_r_squared <- summary(log_model)$r.squared
-cat("Log Model R-squared:", log_r_squared, "\n")
+lasso_r_squared_clean <- 1 - sum((lasso_predictions_clean - y_test_clean)^2) /
+  sum((y_test_clean - mean(y_test_clean))^2)
 
-# Load necessary library
-library(glmnet)
+cat("Lasso Model R-squared (Clean Data):", lasso_r_squared_clean, "\n")
 
-# Prepare the data
-x <- as.matrix(house_data %>%
-                 select(log_house_size, log_land_size, bath, bed, price_per_sqft))
-y <- house_data$log_price
+# Define the threshold
+threshold <- 200000
 
-# Fit the Lasso regression model
-lasso_model <- cv.glmnet(x, y, alpha = 1)
+# Convert actual and predicted prices into classes
+actual_classes <- ifelse(y_test_clean < threshold, "Affordable", "Luxury")
+predicted_classes <- ifelse(lasso_predictions_clean < threshold, "Affordable", "Luxury")
 
-# View the best lambda from cross-validation
-best_lambda <- lasso_model$lambda.min
-cat("Best lambda for Lasso:", best_lambda, "\n")
+# Create a confusion matrix
+library(caret)
+confusion_matrix <- confusionMatrix(as.factor(predicted_classes), as.factor(actual_classes))
 
-# Make predictions
-lasso_predictions <- predict(lasso_model, s = "lambda.min", newx = x)
+# Extract the table from the confusion matrix
+conf_matrix_table <- as.table(confusion_matrix$table)
 
-# Calculate RMSE for Lasso model
-lasso_residuals <- lasso_predictions - y
-lasso_rmse <- sqrt(mean(lasso_residuals^2))
-cat("Lasso Model RMSE:", lasso_rmse, "\n")
-
-# Calculate R-squared for Lasso model
-lasso_r_squared <- 1 - sum(lasso_residuals^2) / sum((y - mean(y))^2)
-cat("Lasso Model R-squared:", lasso_r_squared, "\n")
-
-# Load necessary library for Random Forest
-library(randomForest)
-
-# Prepare the data (using original price, not log-transformed)
-x_rf <- house_data %>%
-  select(house_size, land_size, bath, bed, price_per_sqft)
-
-y_rf <- house_data$price  # Using raw price, not log-transformed
-
-# Train the Random Forest model
-rf_model <- randomForest(x = x_rf, y = y_rf, importance = TRUE, ntree = 500)
-
-# Print the summary of the Random Forest model
-print(rf_model)
-
-# Make predictions
-rf_predictions <- predict(rf_model, newdata = x_rf)
-
-# Calculate RMSE for Random Forest model
-rf_residuals <- rf_predictions - y_rf
-rf_rmse <- sqrt(mean(rf_residuals^2))
-cat("Random Forest Model RMSE:", rf_rmse, "\n")
-
-# Calculate R-squared for Random Forest model
-rf_r_squared <- 1 - sum(rf_residuals^2) / sum((y_rf - mean(y_rf))^2)
-cat("Random Forest Model R-squared:", rf_r_squared, "\n")
-
-
-
-
-
+# Plot the confusion matrix as a heatmap
+library(ggplot2)
+ggplot(data = as.data.frame(conf_matrix_table), aes(x = Prediction, y = Reference)) +
+  geom_tile(aes(fill = Freq), color = "white") +
+  geom_text(aes(label = Freq), vjust = 1) +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
+  labs(title = "Confusion Matrix Heatmap", x = "Predicted Class", y = "Actual Class") +
+  theme_minimal()
 
