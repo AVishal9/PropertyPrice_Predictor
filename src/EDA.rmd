@@ -117,13 +117,13 @@ for (var in histogram_vars) {
 
 ### 3. Feature Relationships
 # Scatter plots for price vs other variables
-scatter_vars <- c("log_house_size", "bath", "bed", "log_land_size")
+scatter_vars <- c("house_size", "bath", "bed")
 
 for (var in scatter_vars) {
-  p <- ggplot(house_data, aes(x = .data[[var]], y = log_price)) +
+  p <- ggplot(house_data, aes(x = .data[[var]], y = price)) +
     geom_point(alpha = 0.5, color = "blue") +
     geom_smooth(method = "lm", color = "red", se = FALSE) +
-    labs(title = paste("Log Price vs", var), x = var, y = "Log Price") +
+    labs(title = paste("Price vs", var), x = var, y = "Price") +
     theme_minimal()
   print(p)
 }
@@ -132,7 +132,7 @@ for (var in scatter_vars) {
 library(GGally)
 
 pair_plot_data <- house_data %>%
-  select(log_price, log_house_size, bath, bed, log_land_size)
+  select(price, house_size, bath, bed,land_size)
 
 ggpairs(pair_plot_data,
         lower = list(continuous = wrap("smooth", alpha = 0.5, size = 0.2, color = "blue")),
@@ -140,4 +140,68 @@ ggpairs(pair_plot_data,
         upper = list(continuous = wrap("cor", size = 3))) +
   theme_minimal() +
   ggtitle("Pairwise Relationships Between Variables")
+  
+# Calculate average price per state
+state_avg_price <- house_data %>%
+  group_by(state) %>%
+  summarise(avg_price = mean(price, na.rm = TRUE))
 
+# Assign colors based on the position in the sorted data
+state_avg_price <- state_avg_price %>%
+  mutate(color = case_when(
+    rank(-avg_price) <= 3 ~ "red",             # Top 3 states: red
+    rank(-avg_price) > (n() - 3) ~ "lightblue",  # Bottom 3 states: light blue
+    TRUE ~ "grey"                             # Middle states: grey
+  ))
+
+# Bar plot of average price by state with custom colors
+ggplot(state_avg_price, aes(x = avg_price, y = reorder(state, avg_price), fill = color)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Average Price per State", x = "Average Price (in thousands)", y = "State") +
+  scale_fill_identity() +  # Use the custom colors assigned in `color`
+  scale_x_continuous(labels = scales::label_comma(scale = 1e-3)) +  # Scale x-axis by 1k (in thousands)
+  geom_text(aes(label = ifelse(color %in% c("red", "lightblue"), 
+                               paste0("$", scales::label_comma()(avg_price)), 
+                               "")), 
+            hjust = -0.1, color = "black", size = 3) +  # Add labels for top 3 and bottom 3 states
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate x-axis labels for better readability
+
+library(tidyverse)
+
+# Filter the data for the three states
+selected_states <- house_data %>%
+  filter(state %in% c("Ohio", "Texas", "California"))
+
+# Summarize data to calculate Affordable (<50%) and Luxury (>90%) price per square foot
+state_summary <- selected_states %>%
+  group_by(state) %>%
+  summarise(
+    affordable_price_per_sqft = quantile(price_per_sqft, 0.50, na.rm = TRUE),  # 50th percentile for Affordable
+    luxury_price_per_sqft = quantile(price_per_sqft, 0.90, na.rm = TRUE)      # 90th percentile for Luxury
+  ) %>%
+  pivot_longer(
+    cols = c(affordable_price_per_sqft, luxury_price_per_sqft), 
+    names_to = "category", 
+    values_to = "value"
+  ) %>%
+  mutate(
+    category = recode(category, 
+                      affordable_price_per_sqft = "Affordable (<50%)", 
+                      luxury_price_per_sqft = "Luxury (>90%)")
+  )
+
+# Plot the bar chart
+ggplot(state_summary, aes(x = state, y = value, fill = category)) +
+  geom_bar(color = "black", stat = "identity", position = "dodge", width = 0.7, alpha = 0.7) +
+  labs(
+    title = "Affordable vs Luxury Price per Square Foot by State",
+    x = "State",
+    y = "Price per Square Foot (in USD)",
+    fill = "Category"
+  ) +
+  scale_fill_manual(values = c("Affordable (<50%)" = "darkgreen", 
+                               "Luxury (>90%)" = "red")) +  # Custom colors
+  theme_bw() +  # Use theme_bw for a clean, classic look
+  theme(axis.text.x = element_text(size = 12, face = "bold"))
+  

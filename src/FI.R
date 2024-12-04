@@ -66,11 +66,6 @@ house_data <- cbind(house_data, state_dummies)
 house_data <- house_data %>%
   mutate(price_per_sqft = price / house_size)
 
-# 5. Feature Interactions
-# Interaction between house_size and land_size
-house_data <- house_data %>%
-  mutate(house_land_interaction = log_house_size * log_land_size)
-
 # Check the structure of the dataset after adding the new features
 str(house_data)
 
@@ -183,6 +178,9 @@ cat("Random Forest Model RMSE:", rf_rmse, "\n")
 # Calculate R-squared for Random Forest model
 rf_r_squared <- 1 - sum(rf_residuals^2) / sum((y_rf - mean(y_rf))^2)
 cat("Random Forest Model R-squared:", rf_r_squared, "\n")
+
+
+
 
 
 
