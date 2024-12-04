@@ -16,6 +16,16 @@ house_data <- house_data %>%
     log_land_size = log1p(land_size)  # Log transformation for land size
   )
 
+# Remove rows where land_size is 0 or land_size is not greater than house_size
+house_data <- house_data %>%
+  filter(land_size > house_size & price > house_size & city!="")
+
+sum(is.na(house_data$city))
+
+# Check the cleaned data
+summary(house_data)
+
+
 # 1. Handling Missing Values
 # Check for missing values in the dataset
 sum(is.na(house_data))  # Number of missing values
@@ -52,9 +62,9 @@ house_data <- cbind(house_data, state_dummies)
 
 
 # 4. Creating New Features
-# Create a new feature: Price per Square Foot (only after applying the log transformation)
+# Create a new feature: Price per Square Foot 
 house_data <- house_data %>%
-  mutate(price_per_sqft = log_price / log_house_size)
+  mutate(price_per_sqft = price / house_size)
 
 # 5. Feature Interactions
 # Interaction between house_size and land_size
