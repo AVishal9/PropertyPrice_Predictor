@@ -32,6 +32,8 @@ house_data <- house_data %>%
   filter(city != "")                 #Drop obs. with empty city field 
 ```
 
+saveRDS(house_data, file = "data_processed/house_data_clean.rds")
+
 ```{r}
 # Histogram for price
 ggplot(house_data, aes(x = price/1000000)) + 
