@@ -102,6 +102,9 @@ ratiob %>%
 
 ## Models 
 
+- Linear Regression 
+- Random Forest 
+- XGBoost 
 
 
 ## Evaluation 
