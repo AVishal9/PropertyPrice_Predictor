@@ -44,7 +44,8 @@ renderPlot({
 
 
 ## Relevance of Data-driven approach in Real Estate
-
+ The real - estate market is inherently dynamic and prone to fluctuations which impacts wide variety of stakeholder.
+     Use of data to predict real estate prices:
 
 ## About the Data: Source & Characteristics
 
@@ -119,7 +120,7 @@ ratiob %>%
 -	No unique ID in the dataset.
 -	High cardinality of categorical variables increased the dimensionality of the data 
 -	High variance in the dataset as it is not particularly for residential real estate, therefore huge outliers in terms of land size.
-- Can be complemented with data on market dynamics
+- Can be complemented with data on market dynamics.
 
 
 
