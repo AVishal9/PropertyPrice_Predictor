@@ -80,7 +80,7 @@ ggplot(clean_data, aes(x = house_size)) +
 ## Data Preprocessing: After Sampling 
 
 ## Data Exploration 
- - Analysed two ratios to gain insights from the data
+ - Analysed ratios to gain insights from the data
          - Price per square foot 
          - Bathrooms/Bedrooms
 
@@ -100,4 +100,17 @@ ratiob %>%
   geom_bar()  
 ```
 
+## Models 
+
+
+
+## Evaluation 
+                              **Model Performance Metric**
+
+| Model             | Mean Absolute Error (MAE) | Mean Squared Error (MSE) | Root Mean Squared Error (RMSE) | R-Squared |
+|---------------|--------------|-------------------|------------|------------|
+| Linear Regression | 187,846.8                 | 188,307,816,638          | 433,944.5                      | 53.71%    |
+|                   |                           |                          |                                |           |
+|                   |                           |                          |                                |           |
+|                   |                           |                          |                                |           |
 ## Thank You!
