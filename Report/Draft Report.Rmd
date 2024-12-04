@@ -40,7 +40,38 @@ It includes **house_size** which represents size of the house in square feet, re
 
 #### Data Cleaning 
 
+The dataset underwent a series of structured preprocessing steps to prepare it for analysis and modeling.
+
 **Before Smapling**
+
+
+1. Handling Missing Values
+
+Rows with missing values (NA) were dropped entirely, reducing the dataset size to approximately one million observations.
+Row-wise elimination was chosen over column-wise elimination because the features with the highest proportion of missing values were critical to the analysis and could not be excluded without significant impact.
+
+2. Adjusting the State Variable
+
+States and territories outside the mainland United States, such as Puerto Rico and Guam, were excluded from the dataset. This adjustment left 51 regions, including the District of Columbia.
+
+3. Duplicate Identification and Removal
+
+As the dataset lacked a unique identifier to detect duplicates, a composite key was created by combining the following variables:
+zip_code, street, city, house_size, bed, and bath.Using this composite key, duplicate entries were identified and removed to ensure each record was unique.
+
+4. Creating a New Variable: Sales Frequency
+
+A new variable, sales_frequency, was created to count the number of times each house appeared in the dataset. This allowed for the identification of properties sold multiple times.
+
+5. Retaining Only the Most Recent Sale
+
+For properties with multiple sales records, only the most recent sale was retained. This was done by sorting the data by sale date and selecting the latest evaluation for each property. Thereafter, the column previously sold date was eliminated.
+
+6. Outlier Detection and Removal
+
+Analysis revealed that 75% of houses in the dataset were below 2,478 square feet in size. Properties exceeding the 99th percentile were identified as potential outliers, which could be extremely luxurious mansions or possible data entry errors. These outliers were removed.
+
+To verify that dropping rows with missing values did not distort the dataset's overall distribution, a comparative analysis of the variable distributions before and after this step was conducted. The distributions remained consistent, confirming that the data integrity was preserved. These preprocessing steps were essential to ensure data quality and reliability for subsequent analysis and modeling. By systematically addressing missing values, duplicates, irrelevant geographical regions, and outliers, the dataset was refined to focus on accurate and relevant real estate trends.
 
 **Sampling**
 
