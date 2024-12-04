@@ -92,6 +92,18 @@ Studies in the real estate domain indicate that values of R-squared typically ra
 ### Model: XGBoost
 XG Boost or Xtreme Gradient boosting is an ensemble learning technique i.e. it combines the predictions of multiple individual model to build a predictive model. It’s ability to handle complex relationships in data was the reason, it was chosen to 
 model real estate price predictions.
+The development of the XGBoost model for predicting real estate prices followed a structured and iterative approach aimed at improving predictive accuracy and model performance. The process began by building a baseline model that achieved an R-squared
+score of 60%. This initial model served as a benchmark for subsequent optimizations.
+To enhance the model's performance, we employed cross-validation to evaluate model stability and hyperparameter tuning to refine its predictive capacity. 
+
+Two distinct methods for hyperparameter tuning were applied:
+
+**Random Search:** This approach involved exploring a wide range of hyperparameter combinations randomly within defined bounds. 
+**Grid Search:** This systematic method involved testing all possible combinations of predefined hyperparameter values.  
+Grid search consistently produced models with the lowest Root Mean Square Error (RMSE), outperforming those optimized through random search. Therefore, the final model was built using the hyperparameter configuration derived from the grid search method.
+
+The performance of the final XGBoost model is represented below -
+
 
 | Metric                         | Value           |
 |--------------------------------|-----------------|
@@ -100,8 +112,15 @@ model real estate price predictions.
 | Root Mean Squared Error (RMSE) | 416694.3        |
 | R-Squared                      | 62.56%          |
 
+**Results**
 
+RMSE: On average, the model exhibits a deviation of \416694.3 per prediction which is a slight improvement as compared to linear regression. 
 
+R-Squared: The model explains 62.56% variability seen in the target value.
+
+**Comparison to Benchmark Values**
+Typical RMSE values for XGBoost in real estate datasets can range from $20,000 to over $50,000 depending on data scale, while R-squared
+ values often exceed 0.85 in well-optimized models.
 
 
 ## Evaluation
@@ -109,7 +128,7 @@ model real estate price predictions.
 | Model             | Mean Absolute Error (MAE) | Mean Squared Error (MSE) | Root Mean Squared Error (RMSE) | R-Squared |
 |---------------|--------------|-------------------|------------|------------|
 | Linear Regression | 187,846.8                 | 188,307,816,638          | 433,944.5                      | 53.71%    |
-|                   |                           |                          |                                |           |
+| XGBoost           |  164636.4                 | 173634154264             | 416694.3                       |  62.56%   |
 |                   |                           |                          |                                |           |
 |                   |                           |                          |                                |           |
 
