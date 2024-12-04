@@ -1,0 +1,312 @@
+---
+title: "Predicting Real Estate Prices in the United States: A Data-Driven Approach"
+output: pdf_document
+author: 
+ - name: Maanya Bagga
+   affiliation: (23-451-164)
+ - name: Vishal Varma Alluri
+   affiliation: (19-876-093)
+ - name: Rakesh Varma Addada
+   affiliation: (19-876-135)
+date: "2024-12-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The real estate market is inherently dynamic and prone to fluctuations making it a critical area of focus for diverse range of stakeholders. These include investors looking to maximise returns, employees working within the sector, tenants, property management teams maintaining assets etc. The primary objective of this project was to develop a  robust predictive model to accurately estimate real estate prices leveraging machine learning techniques.The application of machine learning in the real estate sector offers several advantages over traditional methods, like Comparable Market Analysis (CMA), which are often limited to small-scale predictive tasks.
+
+**Relevance of machine learning models in real estate sector**
+
+- Ability to handle large dataset - While traditional methods like CMA are effective for localized and small-scale price predictions, they struggle to process and analyze the vast volumes of data generated in the real estate sector.
+
+- Modeling Complex Relationships - Real estate prices are influenced by numerous factors, including location, property features, market trends, and economic conditions. Machine learning techniques excel at identifying and modeling complex, non-linear interactions between these variables, which traditional methods often fail to capture
+
+- Improved Accuracy and Insights - Machine learning models can provide more accurate predictions and deeper insights by continuously learning from new data.
+
+In this project, five different machine learning models were trained to predict real estate prices based on a predefined set of features.Each model was evaluated using standardized error metrics, such as Root Mean Square Error (RMSE) and R-squared to ensure a comprehensive assessment of their predictive performance.
+
+
+## About the Dataset
+
+#### Source and Features
+
+The original dataset was sourced from kaggle.It was a csv file consisting of 2,226,382 observation representing real estate listings in the United States. The data is categorized by various attributes, including state, city, and ZIP code.The dataset had 12 features in total out of which 6 variables were categorical columns - **Brokered by** , **Status**, **Street**, **city**, **state** and **zip_code**. Brokered by and street were numerically encoded for privacy purposes. Our target variable **Price** represents the sale price of a property in dollars.
+It includes **house_size** which represents size of the house in square feet, representing the living space or building area while **acre_lot** refers to the total land area of the property. In case the property has been sold previously, the column **previously sold date** includes a date, otherwise it is Null.The data on real estate was originally parsed from Realtor.com, a prominent real estate listing website in the USA.
+
+
+#### Data Cleaning 
+
+**Before Smapling**
+-1) millions of rows and a huge dataset.
+-2) many NA's and outliers
+ 
+
+**Sampling**
+- 1)Performed a row-wise elimination of NAs
+- 2)Dropped the states that weren't in mainland USA.
+- 3)Removed observations that fell outside of 99th percentile.  
+- 4)Created a unique id using composite key to remove duplicates.
+- 5)Only included the most recent sale of observations.
+- 6)Included a column called sale frequency.
+- 7)Used Stratified sampling
+
+**After Sampling**
+Before proceeding with sampling, we already excluded observations lying outside the 99th percentile to mitigate the impact of extreme outliers. Despite this preprocessing step, certain variables in the dataset exhibited positive skewness:
+
+**Price and House Size:**
+The means of these variables were slightly higher than their respective medians, indicating mild positive skewness.This skewness was attributed to the presence of luxury properties with prices ranging between $3,000 and $4,000 per square foot.
+**Land Size:**
+The mean and median values for land size showed a significant disparity, highlighting substantial skewness in this variable.To address this, we created a subset by excluding observations that significantly deviated from the mean, using a threshold based on a specific number of standard deviations. However, even in this subset, the variables retained a right-tailed distribution.
+
+Given this, we decided to retain the original dataset as it provided a balanced representation of the population, including the high-end luxury properties, which are an integral part of the real estate market.
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+
+## Data Exploration and Visualisation
+
+- Data Cleaning: Removed invalid records where land_size less than or equal to house_size, price less than or equal to house_size, or city was missing.
+- Log Transformations: Applied log transformations to price, house_size, and land_size to reduce skewness.
+- Feature Engineering: Created variables like price_sqft, house_size_category, density, and flagged top luxury properties (luxury_property).
+- Distribution Analysis: Visualized histograms for price, house_size, and log_land_size to understand data spread and outliers.
+- State-Level Insights: Identified top states for affordable and luxury properties, comparing prices per square foot and total counts.
+- Relationship Analysis: Correlation matrix and scatter plots revealed strong positive relationships between price, house_size, and bath.
+
+### Practical Insights
+
+```{r echo=FALSE, out.width="600px"}
+knitr::include_graphics("plots/affordable_vs_luxury_prices.png")
+knitr::include_graphics("plots/average_price_per_state.png") 
+knitr::include_graphics("plots/correlation_matrix.png")
+knitr::include_graphics("plots/price_distribution_categories.png")
+knitr::include_graphics("plots/top_affordable_states.png")
+knitr::include_graphics("plots/top_luxury_states.png")
+```
+
+
+# Models
+
+## Model: Linear Regression
+
+Linear regression was chosen as the baseline model for this project due to its simplicity and effectiveness, as evidenced by the literature. It is widely recognized in the real estate domain for its low prediction error when capturing relationships between features and target variable i.e. price. However, despite its merits, this model was not a perfect fit for the dataset at hand due to the potential issue of high cardinality among categorical variables, which if one hot encoded would lead to p \> n (variables \> observations)
+Therefore, we grouped the variables with low frequency into "Others" before one hot encoding them. Thereafter used forward selection to select regressors. The forward selection process found a model that contained 82 regressors out of which half weren't statistically significant, therefore thrown out to reduce noise as well as the risk of overfitting.
+
+**Model Variants Tested** 
+
+In total seven variations of the linear regression model were estimated to evaluate performance, namely:
+
+-   Linear-linear
+-   Log-linear
+-   Log-log
+-   Multiple linear regression with only 5 regressors (house size, land size, baths, beds and sale frequency)
+-   Interaction between house size and land size
+-   Polynomial term for land size
+-   Combined approach - Interaction term as well as polynomial term
+
+Out of the above listed models the first three(Linear-linear, Log-linear, and Log-log) were estimated under two different transformations of the data-random sampling & stratified sampling. Among these, the log-log model demonstrated the best performance under both data. However, an analysis of the residual plots under random sampling revealed that the residuals were not randomly distributed. This issue was addressed when stratified sampling technique was applied, the residuals now seemed to have a roughly constant variance. Therefore, the model with stratified was chosen as the best one, even through the R-squared value was slightly higher with the random sampling (60% with random sampling vs 58% with stratified). An analysis of the Q-Q plots showed the residuls cclosely followed the dashed line except the tails on either side which exhibited notable deviations, suggesting the presence of extreme outliers, therefore model is expected to be impacted in case of predictions related to extreme values(Luxury houses).
+
+**Log-Log Model Performance Metrics**
+
+The performance of the log-log linear regression model was evaluated using standard metrics as represented below -
+
+| Metric                         | Value           |
+|--------------------------------|-----------------|
+| Mean Absolute Error (MAE)      | 187,846.8       |
+| Mean Squared Error (MSE)       | 188,307,816,638 |
+| Root Mean Squared Error (RMSE) | 433,944.5       |
+| R-Squared                      | 53.71%          |
+
+**Results**
+
+RMSE: On average, the model exhibits a deviation of \$433,944.5 per prediction. The RMSE value of 433,944.5 is considered acceptable given that the price range of the properties in the dataset is in the millions.
+
+MSE: The high value of the MSE suggests that outliers are significantly influencing the results,which consistent the observations from the Q-Q plots.
+
+R-Squared: The model explains 53.71% variability seen in the target value.
+
+**Comparison to Benchmark Values**
+
+Studies in the real estate domain indicate that values of R-squared typically range between 0.40 and 0.80. Simpler models applied to high-variance datasets often yield values in the lower range. For real estate models in expensive markets such as New York City or San Francisco, RMSE greater than \$100,000 are common due to high property values. In light of these benchmarks, the performance of the baseline linear regression model aligns with expectations for real estate price prediction using datasets with significant variance.
+
+
+### Model: XGBoost
+XG Boost or Xtreme Gradient boosting is an ensemble learning technique i.e. it combines the predictions of multiple individual model to build a predictive model. It’s ability to handle complex relationships in data was the reason, it was chosen to 
+model real estate price predictions.
+The development of the XGBoost model for predicting real estate prices followed a structured and iterative approach aimed at improving predictive accuracy and model performance. The process began by building a baseline model that achieved an R-squared
+score of 60%. This initial model served as a benchmark for subsequent optimizations.
+To enhance the model's performance, we employed cross-validation to evaluate model stability and hyperparameter tuning to refine its predictive capacity. 
+
+Two distinct methods for hyperparameter tuning were applied:
+
+**Random Search:** This approach involved exploring a wide range of hyperparameter combinations randomly within defined bounds. 
+**Grid Search:** This systematic method involved testing all possible combinations of predefined hyperparameter values.  
+Grid search consistently produced models with the lowest Root Mean Square Error (RMSE), outperforming those optimized through random search. Therefore, the final model was built using the hyperparameter configuration derived from the grid search method.
+
+The performance of the final XGBoost model is represented below -
+
+
+| Metric                         | Value           |
+|--------------------------------|-----------------|
+| Mean Absolute Error (MAE)      | 164636.4        |
+| Mean Squared Error (MSE)       | 173634154264    |
+| Root Mean Squared Error (RMSE) | 416694.3        |
+| R-Squared                      | 62.56%          |
+
+**Results**
+
+RMSE: On average, the model exhibits a deviation of \416694.3 per prediction which is a slight improvement as compared to linear regression. 
+
+R-Squared: The model explains 62.56% variability seen in the target value.
+
+**Comparison to Benchmark Values**
+Typical RMSE values for XGBoost in real estate datasets can range from $20,000 to over $50,000 depending on data scale, while R-squared
+ values often exceed 0.85 in well-optimized models. Therefore, the above estimated model is not upto par with the benchmark values.
+
+## Model: Lasso Regression
+
+Lasso regression is a linear regression method with regularization that shrinks less important feature coefficients to zero, effectively performing feature selection. It helps reduce multicollinearity, prevent overfitting, and improves model interpretability. In this project, Lasso is useful for identifying key factors like house_size and bath while excluding irrelevant ones. This ensures better predictions and a simpler, more robust model.
+
+**Variable Added**
+
+**Log-Transformed Features:**
+
+log_price, log_house_size, log_land_size:Stabilize variance and linearize relationships.
+
+**Engineered Features:**
+
+bed_bath_ratio
+land_to_house_ratio
+bed_bath_interaction
+total_rooms
+rooms_size_interaction
+
+**One-Hot Encoded Categorical Variables:**
+
+States (state) were converted into dummy variables for better model compatibility.
+
+**Fine-Tuning**
+
+The lambda was fine-tuned using a grid search over a wide range of values (10^−4 to 10^1).
+
+**Cross-Validation**
+
+10-fold cross-validation was used to evaluate model performance.
+
+**Key Coefficients**
+
+House Size (log_house_size): The most significant predictor, where doubling house size increases price by ~132%.
+Bathrooms (bath): Adding one bathroom increases price by ~7.6%.
+Total Rooms (total_rooms): Adding one additional room increases price by ~4.2%.
+Room-to-Bathroom Balance (bed_bath_ratio): A higher ratio of bedrooms to bathrooms reduces price by ~16.4%.
+Key Coefficients
+
+**Performance Metrics**
+
+| Metric                         | Value           |
+|--------------------------------|-----------------|
+| Root Mean Squared Error (RMSE) | 0.4780          |
+| Mean Absolute Error (MAE)      | 0.3695          |  
+| Mean Squared Error (MSE)       | 0.2285          |
+| R-Squared                      | 45.84%          |
+
+## Model: Random Forest
+
+The Random Forest algorithm was selected for its robustness to overfitting and ability to capture complex non-linear relationships. Additionally, it handles categorical variables as factors without requiring extensive preprocessing. 
+
+### Data Preprocessing
+
+**Target Encoding**
+- City Encoding: Each city was replaced with the average house price for that city.
+- State Encoding: Each state was replaced with the average house price for that state.
+- These mean-encoded features allows the model to account for geographic price information effectively while minimizing the risk of overfitting.
+
+**Feature Selection**
+The dataset included the following features:
+- Continuous variables: `house_size`, `bed`, `bath`, `land_size`
+- Encoded categorical variables: `city_mean_price`, `state_mean_price`
+- Target variable: `price`
+
+No further interaction terms were created as Random Forests are capable of analysing non-linear relationships.
+
+
+**Sampling Strategy**
+
+A stratified sampling technique was used to split the data into training (80%) and testing (20%) sets. Stratification ensured that the price distribution in the training and testing sets closely matched the overall dataset which minimizes potential sampling bias.
+
+
+**Hyperparameter Tuning**
+
+To optimize the Random Forest model, we applied a structured grid search with cross-validation:
+
+- **Cross-validation:** A 10-fold cross-validation approach was used to ensure model stability.
+- **Tuning Grid:** The grid search explored the following hyperparameter combinations:
+  - Number of variables sampled at each split (`mtry`): 2, 4, 6
+  - Minimum node size (`min.node.size`): 1, 5, 10
+  - Splitting criterion (`splitrule`): Variance
+
+This systematic tuning process identified the optimal hyperparameters, resulting in the best performance on test data.
+
+
+**Model Evaluation**
+
+The model was evaluated on the test dataset 
+
+**Performance Metrics**
+
+| Metric                         | Value           |
+|--------------------------------|-----------------|
+| Root Mean Squared Error (RMSE) | \$329,862       |
+| Mean Absolute Error (MAE)      | \$134,830.3
+| Mean Squared Error (MSE)       | 108,808,930,589 |
+| R-Squared                      | 70.7%           |
+
+**Analysis**
+- The model's average prediction error RMSE was \$329,862, given the dataset's wide price range, especially for luxury properties.RMSE benchmark ranges from $300,000 to $400,000.
+- The MAE is also relatively high compared to the median price, again likely influenced by luxury properties.
+- R_squared is reasonable.
+---
+
+**Feature Importance**
+
+The most influential features, based on impurity reduction, were:
+1. `city_mean_price`
+2. `house_size`
+3. `bath`
+4. `state_mean_price`
+5. `land_size`
+
+This aligns with domain knowledge that house size, and geographic factors influence property prices.
+
+**Comparison of Variants**
+We compared two Random Forest implementations:
+1. Using `ranger`: Faster training with cross-validation and target encoding resulted in robust performance.
+2. Using `rf`: Provided similar performance metrics but required more computational time.
+Both implementations yielded comparable RMSE, MAE and \( R^2 \), showing the model's consistency across frameworks.
+
+**Challenges and Limitations**
+- When we included categorical variables as factors, the resulting \( R^2 \) was approximately 0.40, suggesting that this approach was not optimal for our dataset. 
+- We also experimented with label encoding, where hierarchical labels were assigned to states to capture their influence on prices, but this approach posed risks of train-test data leakage. 
+- Additional domain-specific features (e.g., proximity to amenities, crime rates) could further boost performance.
+
+Additional exploration of feature engineering and alternative sampling methods required.
+
+
+
+
+
+
+## Evaluation
+
+| Model             | Mean Absolute Error (MAE) | Mean Squared Error (MSE) | Root Mean Squared Error (RMSE) | R-Squared |
+|---------------|--------------|-------------------|------------|------------|
+| Linear Regression | 187,846.8                 | 188,307,816,638          | 433,944.5                      | 53.71%    |
+| XGBoost           |  164636.4                 | 173634154264             | 416694.3                       | 62.56%    |
+| Random Forest     |  134,830.3                | 108,808,930,589          | 329862                         | 70.7%     |
+| Lasso             |     0.3695                |  0.2285                  | 0.4780                         | 45.84%    |
+
