@@ -17,7 +17,18 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-The real estate market is inherently dynamic and prone to fluctuations which impacts a wide array of stakeholders. These include investors, employees, tenants, property management teams, supply chain vendors, and the surrounding communities. The primary objective of this project was to develop a predictive model capable of accurately estimating real estate prices based on a set of predefined input features.
+The real estate market is inherently dynamic and prone to fluctuations making it a critical area of focus for diverse range of stakeholders. These include investors looking to maximise returns, employees working within the sector, tenants, property management teams maintaining assets etc. The primary objective of this project was to develop a  robust predictive model to accurately estimate real estate prices leveraging machine learning techniques.The application of machine learning in the real estate sector offers several advantages over traditional methods, like Comparable Market Analysis (CMA), which are often limited to small-scale predictive tasks.
+
+**Relevance of machine learning models in real estate sector**
+
+- Ability to handle large dataset - While traditional methods like CMA are effective for localized and small-scale price predictions, they struggle to process and analyze the vast volumes of data generated in the real estate sector.
+
+- Modeling Complex Relationships - Real estate prices are influenced by numerous factors, including location, property features, market trends, and economic conditions. Machine learning techniques excel at identifying and modeling complex, non-linear interactions between these variables, which traditional methods often fail to capture
+
+- Improved Accuracy and Insights - Machine learning models can provide more accurate predictions and deeper insights by continuously learning from new data.
+
+In this project, five different machine learning models were trained to predict real estate prices based on a predefined set of features.Each model was evaluated using standardized error metrics, such as Root Mean Square Error (RMSE) and R-squared to ensure a comprehensive assessment of their predictive performance.
+
 
 ## About the Dataset
 
@@ -29,6 +40,12 @@ It includes **house_size** which represents size of the house in square feet, re
 
 #### Data Cleaning 
 
+**Before Smapling**
+
+**Sampling**
+
+
+**After Sampling**
 Before proceeding with sampling, we already excluded observations lying outside the 99th percentile to mitigate the impact of extreme outliers. Despite this preprocessing step, certain variables in the dataset exhibited positive skewness:
 
 **Price and House Size:**
@@ -52,8 +69,11 @@ plot(pressure)
 ### Model: Linear Regression
 
 Linear regression was chosen as the baseline model for this project due to its simplicity and effectiveness, as evidenced by the literature. It is widely recognized in the real estate domain for its low prediction error when capturing relationships between features and target variable i.e. price. However, despite its merits, this model was not a perfect fit for the dataset at hand due to the potential issue of high cardinality among categorical variables, which if one hot encoded would lead to p \> n (variables \> observations)
+Therefore, we grouped the variables with low frequency into "Others" before one hot encoding them. Thereafter used forward selection to select regressors. The forward selection process found a model that contained 82 regressors out of which half weren't statistically significant, therefore thrown out to reduce noise as well as the risk of overfitting.
 
-**Model Variants Tested** In total seven variations of the linear regression model were estimated to evaluate performance, namely:
+**Model Variants Tested** 
+
+In total seven variations of the linear regression model were estimated to evaluate performance, namely:
 
 -   Linear-linear
 -   Log-linear
@@ -120,7 +140,7 @@ R-Squared: The model explains 62.56% variability seen in the target value.
 
 **Comparison to Benchmark Values**
 Typical RMSE values for XGBoost in real estate datasets can range from $20,000 to over $50,000 depending on data scale, while R-squared
- values often exceed 0.85 in well-optimized models.
+ values often exceed 0.85 in well-optimized models. Therefore, the above estimated model is not upto par with the benchmark values.
 
 
 ## Evaluation
