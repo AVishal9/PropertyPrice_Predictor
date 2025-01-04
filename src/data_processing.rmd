@@ -23,10 +23,11 @@ beds_threshold <- quantile(data$bed, 0.99)
 
 
 filtered_data <- data %>%
-  filter(house_size <= house_size_threshold,
-         bath <= baths_threshold,
-         bed <= beds_threshold)
-  
+  filter(
+    house_size <= house_size_threshold,
+    bath <= baths_threshold,
+    bed <= beds_threshold
+  )
 ```
 Thus we only consider data upto 99th percentile, which removes about 22k observations
 
