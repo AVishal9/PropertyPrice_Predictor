@@ -24,7 +24,7 @@ str(data_og)
 #There are 5 numeric variables, 4 variables with class character and 3 of integer class.
 
 ##########
-#Preliminary Exploratory Data Analysis and Data Cleaning 
+#Data Cleaning & Exploratory Data Analysis
 #########
 
 ####
@@ -372,9 +372,171 @@ ggplot(clean_data2, aes(x = land_size)) +
     y = "Count"
   ) +
   theme_bw()
+# still has a slight right tail
 
-# still has a slight right tail.
+# Target Variable - Price
+summary(clean_data2$price)
 
+ggplot(clean_data2, aes(x = price)) + 
+  geom_histogram(bins = 50,fill = "darkgreen", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Target Variable",
+    x = "Dollars",
+    y = "Count"
+  ) +
+  theme_bw()+
+  scale_x_log10(labels = scales::label_number())
+
+# There are houses with prices ranging from
+#1 dollar - 5,000 dollars in places like New York and California
+# houses with such. low prices are unlikely, thus this seems to be a data entry error
+# Therefore, those should be eliminated
+
+clean_data2 <- clean_data2%>%
+  filter(price> 5000)
+
+# Checking the minimum price each state should have based on house_size
+minimum_house_size_by_state <- clean_data2 %>%
+  group_by(state) %>%
+  filter(house_size == min(house_size, na.rm = TRUE)) %>%
+  slice(1) %>% 
+  dplyr::select(state, house_size, price) %>%
+  arrange(state)
+
+# Some states do have unrealistically high value for smallhouse/studio apartment 
+# but they are mainly California and New York
+# The lowest price point for a 123 sq feet house in Texas is $160,000 which isn't realistic, 
+
+
+minimum_price_by_state <- clean_data2 %>%
+  group_by(state) %>%
+  filter(price == min(price, na.rm = TRUE)) %>%
+  slice(1) %>% 
+  dplyr::select(state, house_size, price) %>%
+  arrange(state)
+
+# As the price per square footage differs based on the states/location, 
+# we will examine the ratio across different states
+# Price:House Size Ratio - To assess the price per square footage for different properties.
+ratio_hp <- clean_data2 %>%
+  mutate(ratio_hp = price / house_size)
+
+# Summary statistics of Ratio
+summary(ratio$ratio_hp) # The range of ratios varies. from 0.000 to 4487.00
+
+# Visual Inspection
+ggplot(ratio, aes(x = ratio_hp)) +
+  geom_histogram(color = "black") +
+  labs(x = "Price Per Square Feet", y = "Count") +
+  theme_minimal() # There are properties that are for 4000/sq feet which seem like are luxury properties
+
+# Minimum Price per Square Foot Ratio
+
+ratio_min <- ratio %>%
+  group_by(state)%>% # Grouped by state to analyse the trend
+  filter(ratio_hp==min(ratio_hp)) %>%
+  arrange(state) %>%
+  dplyr::select(state, ratio_hp)
+  ungroup()
+  
+# Visual Inspection
+ggplot(ratio_min, aes(x = ratio_hp)) +
+    geom_histogram(color = "black", fill= "darkblue" )+
+    labs(x = "Price Per Square Feet", y = "Count") +
+    theme_minimal() 
+
+# Maximum Price per square foot Ratio.
+ratio_max <- ratio %>%
+  group_by(state)%>%
+  filter(ratio_hp==max(ratio_hp)) %>%
+  arrange(state) %>%
+  dplyr::select(state, ratio_hp)
+ungroup()
+
+# Visual Inspection
+ggplot(ratio_max, aes(x = ratio_hp)) +
+  geom_histogram(color = "black", fill= "darkblue" )+
+  labs(x = "Price Per Square Feet", y = "Count") +
+  theme_minimal() 
+
+
+#######
+# Data Sampling 
+#######
+
+# Categorizing the houses based on size, number of bedrooms and baths
+
+
+categorized_data <- clean_data2 %>%
+  mutate(
+    house_size_category = case_when(
+      house_size < 1500 ~ "Small",
+      house_size >= 1500 & house_size <= 2500 ~ "Medium",
+      house_size > 2500 & house_size <= 4000 ~ "Large",
+      house_size > 4000 ~ "Extra-Large"
+    ),
+    bed_category = case_when(
+      bed <= 2 ~ "Small",
+      bed > 2 & bed <= 4 ~ "Medium",
+      bed > 4 ~ "Large"
+    ),
+    bath_category = case_when(
+      bath <= 2 ~ "Small",
+      bath > 2 & bath <= 3 ~ "Medium",
+      bath > 3 ~ "Large"
+    )
+  )
+
+# Proportional Stratification
+set.seed(123)
+
+sample_size <- 15000
+
+stratified_sample <- categorized_data %>%
+  group_by(state, house_size_category, bed_category, bath_category) %>%
+  # Sample proportionally from each stratum
+  sample_n(
+    size = round(n() * (sample_size / nrow(categorized_data))),
+    replace = FALSE
+  ) %>%
+  ungroup()
+
+# 14918 observations were sampled 
+
+# Check if sample data proportionally represents original data
+# Proportions in the original dataset
+original_proportions <- categorized_data %>%
+  group_by(state, house_size_category, bed_category, bath_category) %>%
+  summarise(count_original = n(), .groups = "drop") %>%
+  mutate(proportion_original = count_original / sum(count_original))
+
+# Proportions in the sample dataset
+sample_proportions <- stratified_sample %>%
+  group_by(state, house_size_category, bed_category, bath_category) %>%
+  summarise(count_sample = n(), .groups = "drop") %>%
+  mutate(proportion_sample = count_sample / sum(count_sample))
+
+# Comparing the proportions in both dataset
+comparison <- original_proportions %>%
+  inner_join(sample_proportions, by = c("state", "house_size_category", "bed_category", "bath_category"))
+
+comparison <- comparison %>%
+  mutate(proportion_difference = abs(proportion_original - proportion_sample))  # The sampled data aligns closely with the original data
+
+
+# Creating unique id for the each composite key
+stratified_sample$h_id <- seq_len(nrow(stratified_sample))
+
+# Remove categorical variables
+stratified_sample <- stratified_sample %>%
+  dplyr::select(-house_size_category, -bath_category, -bed_category)
+
+# Saving the sampled file
+write.csv(stratified_sample, "sampled_data.csv")
+
+#########
+# 
+#########
 
 
 
