@@ -374,7 +374,9 @@ ggplot(clean_data2, aes(x = land_size)) +
   theme_bw()
 # still has a slight right tail
 
+############
 # Target Variable - Price
+############
 summary(clean_data2$price)
 
 ggplot(clean_data2, aes(x = price)) + 
@@ -393,7 +395,7 @@ ggplot(clean_data2, aes(x = price)) +
 # Therefore, those should be eliminated
 
 clean_data2 <- clean_data2%>%
-  filter(price> 5000)
+  filter(price> 10000)
 
 # Checking the minimum price each state should have based on house_size
 minimum_house_size_by_state <- clean_data2 %>%
@@ -415,8 +417,11 @@ minimum_price_by_state <- clean_data2 %>%
   dplyr::select(state, house_size, price) %>%
   arrange(state)
 
+# Alabama has a price of $8000 for a 1221 square feet apartment.
+
 # As the price per square footage differs based on the states/location, 
-# we will examine the ratio across different states
+# we will examine the ratio grouped by different states
+
 # Price:House Size Ratio - To assess the price per square footage for different properties.
 ratio_hp <- clean_data2 %>%
   mutate(ratio_hp = price / house_size)
@@ -436,29 +441,107 @@ ratio_min <- ratio %>%
   group_by(state)%>% # Grouped by state to analyse the trend
   filter(ratio_hp==min(ratio_hp)) %>%
   arrange(state) %>%
-  dplyr::select(state, ratio_hp)
+  dplyr::select(state, ratio_hp)%>%
+  print(n=51)%>%
   ungroup()
-  
-# Visual Inspection
-ggplot(ratio_min, aes(x = ratio_hp)) +
-    geom_histogram(color = "black", fill= "darkblue" )+
-    labs(x = "Price Per Square Feet", y = "Count") +
-    theme_minimal() 
+
+# Comparing the list of minimum ratio with approximate ranges that typically persist in 
+# residential market of the given state.
+
+# The minimum in California is 37.1 which seems to low. 
+# The usual range for California is 100-200.
+# Delaware is 18.7 when the lowest range is 50-80
+# Alaska seems too high Alaska 215
+# Florida               18.1    too low 
+# Georgia               19.4    too low
+# Michigan               1.89    too low
+# Missouri               0.000615 unreasonably low
+# New York               5.79  too low for new york
+#Ohio                   8.44 
+# Pennsylvania          12.0   
+# South Carolina        16.6     
+# South Dakota          15.6 
+# Virginia              11.1  
+
+
 
 # Maximum Price per square foot Ratio.
 ratio_max <- ratio %>%
   group_by(state)%>%
   filter(ratio_hp==max(ratio_hp)) %>%
   arrange(state) %>%
-  dplyr::select(state, ratio_hp)
-ungroup()
+  dplyr::select(state, ratio_hp)%>%
+  ungroup()
 
-# Visual Inspection
-ggplot(ratio_max, aes(x = ratio_hp)) +
-  geom_histogram(color = "black", fill= "darkblue" )+
-  labs(x = "Price Per Square Feet", y = "Count") +
-  theme_minimal() 
+# Average Price per square foot Ratio
+ratio_avg <- ratio %>%
+  group_by(state)%>%
+  summarise(ratio_hp = mean(ratio_hp)) %>%
+  arrange(state) %>%
+  print(n=51)%>%
+  ungroup()
 
+
+# Since price ranges vary across states so we will group the target variable by state and city before making the cuts.
+####
+# Way 1
+####
+data_cleaned <- clean_data2 %>%
+  group_by(state, city) %>%
+  mutate(
+    lowerbound = quantile(price, 0.01),
+    upperbound = quantile(price, 0.99)
+  ) %>%
+  filter(price >= lowerbound & price <= upperbound) %>%
+  ungroup()
+
+ggplot(data_cleaned, aes(x = price)) + 
+  geom_histogram(bins = 50,fill = "darkgreen", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Target Variable",
+    x = "Dollars",
+    y = "Count"
+  ) +
+  theme_bw()+
+  scale_x_log10()
+summary(data_cleaned$price)
+
+####
+# Alternative
+####
+
+data_cleaned2 <- clean_data2 %>%
+  group_by(state, city) %>%
+  mutate(
+    Q1 = quantile(price, 0.25),
+    Q3 = quantile(price, 0.75),
+    IQR = Q3 - Q1,
+    Lower_Bound = Q1 - 1.5 * IQR,
+    Upper_Bound = Q3 + 1.5 * IQR
+  ) %>%
+  filter(price >= Lower_Bound & price <= Upper_Bound) %>%
+  dplyr::select(-Q1, -Q3, -IQR, -Lower_Bound, -Upper_Bound)%>%
+  ungroup()
+
+summary(data_cleaned2$price)
+
+####
+#way 2 -I think this in general gives better results bcz atleast the min value is not 10,000.
+###
+
+clean_data_percentile <- clean_data2%>%
+  filter(price>= lower_percentile & price<= upper_percentile)
+
+ggplot(clean_data_percentile, aes(x = price)) + 
+  geom_histogram(bins = 50,fill = "darkgreen", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Target Variable",
+    x = "Dollars",
+    y = "Count"
+  ) +
+  theme_bw()
+
+summary(clean_data_percentile$price)
 
 #######
 # Data Sampling 
@@ -535,7 +618,7 @@ stratified_sample <- stratified_sample %>%
 write.csv(stratified_sample, "sampled_data.csv")
 
 #########
-# 
+# Model Building & Feature Selection
 #########
 
 
