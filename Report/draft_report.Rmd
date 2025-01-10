@@ -369,15 +369,21 @@ House Size (log_house_size): The most significant predictor, where doubling hous
 
 ## Model: Random Forest
 
-The Random Forest algorithm was selected for its robustness to overfitting and ability to capture complex non-linear relationships. Additionally, it handles categorical variables as factors without requiring extensive preprocessing.
+The Random Forest algorithm was selected for its robustness to overfitting and ability to capture complex non-linear relationships,making it a highly suitable choice for predicting house prices. Additionally, it handles categorical variables as factors and does not require complex preprocessing. It handles multi-collinearity well and outliers have a very limited impact due to the avergaing effect of multiple decision trees.
 
 ### Data Preprocessing
 
-**Target Encoding** - City Encoding: Each city was replaced with the average house price for that city. - State Encoding: Each state was replaced with the average house price for that state. - These mean-encoded features allows the model to account for geographic price information effectively while minimizing the risk of overfitting.
+**Region-Based Encoding**
+States were grouped into four regions (Northeast, Midwest, West, and South) to reduce dimensionality while retaining geographical context.
+Regions and the status variable were one-hot encoded to effectively capture their influence on house prices.
 
-**Feature Selection** The dataset included the following features: - Continuous variables: `house_size`, `bed`, `bath`, `land_size` - Encoded categorical variables: `city_mean_price`, `state_mean_price` - Target variable: `price`
+**Frequency Encoding for High-Cardinality Features**
+The city variable was frequency-encoded to address its high cardinality, ensuring that its statistical relevance was incorporated without causing dimensionality issues. The city column was later removed after encoding to avoid redundancy.
 
 No further interaction terms were created as Random Forests are capable of analysing non-linear relationships.
+
+**Robust Feature Selection**:
+The final chosen variables were - Target variable: price - Continuous variables: house_size, land_size, bed, bath, sale_frequency, - Encoded categorical variables: region (states) and status (sold or unsold), and city_freq. Features such as street, state, brokered_by, zip_code, and others irrelevant or too granular for predictive modeling were excluded to prevent overfitting. 
 
 **Sampling Strategy**
 
@@ -385,7 +391,7 @@ A stratified sampling technique was used to split the data into training (80%) a
 
 **Hyperparameter Tuning**
 
-To optimize the Random Forest model, we applied a structured grid search with cross-validation:
+To optimize the Random Forest model, a structured grid search with cross-validation was implemented:
 
 -   **Cross-validation:** A 10-fold cross-validation approach was used to ensure model stability.
 -   **Tuning Grid:** The grid search explored the following hyperparameter combinations:
@@ -393,7 +399,7 @@ To optimize the Random Forest model, we applied a structured grid search with cr
     -   Minimum node size (`min.node.size`): 1, 5, 10
     -   Splitting criterion (`splitrule`): Variance
 
-This systematic tuning process identified the optimal hyperparameters, resulting in the best performance on test data.
+This tuning process identified the optimal hyperparameters, resulting in the best performance on test data.
 
 **Model Evaluation**
 
@@ -403,22 +409,25 @@ The model was evaluated on the test dataset
 
 | Metric                         | Value           |
 |--------------------------------|-----------------|
-| Root Mean Squared Error (RMSE) | \$329,862       |
-| Mean Absolute Error (MAE)      | \$134,830.3     |
-| Mean Squared Error (MSE)       | 108,808,930,589 |
-| R-Squared                      | 70.7%           |
+| Root Mean Squared Error (RMSE) | \$231932        |
+| Mean Absolute Error (MAE)      | \$150,142       |
+| Mean Squared Error (MSE)       | 53,792,452,624  |
+| R-Squared                      | 45.3%           |
 
-**Analysis** - The model's average prediction error RMSE was \$329,862, given the dataset's wide price range, especially for luxury properties.RMSE benchmark ranges from \$300,000 to \$400,000. - The MAE is also relatively high compared to the median price, again likely influenced by luxury properties. - R_squared is reasonable. ---
+**Analysis** - The model's average prediction error RMSE was \$231932  indicates a considerable average deviation of predicted prices from actual values. This is expected given the variability in house prices due to high-priced luxury properties. RMSE benchmark ranges from \$300,000 to \$400,000 so the model seems to perform well. - The MAE of $150,142 indicates that, on average, the model's predictions deviate from the true price by approximately 43% of the median house price ($350,000) again likely influenced by luxury properties, but this seems reasonable. - R_squared of 45.3%  suggests that the model explains nearly half of the variance in house prices. This is moderate,it suggests that additional features may be required. ---
 
 **Feature Importance**
-
-The most influential features, based on impurity reduction, were: 1. `city_mean_price` 2. `house_size` 3. `bath` 4. `state_mean_price` 5. `land_size`
+```{r echo=FALSE, out.width="49%", fig.align='center',fig.cap= "Feature Importance - RandomForest"}
+knitr::include_graphics("./plots/rf_featureImp.png")
+```
+The most influential features, based on impurity reduction, were: 1. `house_size` 2. `region_West` 3. `bath` 4. `city_freq` 5. `land_size`
 
 This aligns with domain knowledge that house size, and geographic factors influence property prices.
 
-**Comparison of Variants** We compared two Random Forest implementations: 1. Using `ranger`: Faster training with cross-validation and target encoding resulted in robust performance. 2. Using `rf`: Provided similar performance metrics but required more computational time. Both implementations yielded comparable RMSE, MAE and $R^2$, showing the model's consistency across frameworks.
+**Comparison of Variants** Two Random Forest implementations were compared: 1. Using `ranger`: Faster training with cross-validation and target encoding resulted in robust performance. 2. Using `rf`: Provided similar performance metrics but required more computational time. Both implementations yielded comparable RMSE, MAE and $R^2$, showing the model's consistency across frameworks.
 
-**Challenges and Limitations** - When we included categorical variables as factors, the resulting $R^2$ was approximately 0.40, suggesting that this approach was not optimal for our dataset. - We also experimented with label encoding, where hierarchical labels were assigned to states to capture their influence on prices, but this approach posed risks of train-test data leakage. - Additional domain-specific features (e.g., proximity to amenities, crime rates) could further boost performance.
+**Challenges and Limitations**  
+Initially target encoding was implemented by replacing state and city variables with their resepctive house price average, but their vaibility is questionable. We also experimented with label encoding, where hierarchical labels were assigned to states to capture their influence on prices, but this approach posed risks of train-test data leakage. - Additional domain-specific features (e.g., proximity to amenities, crime rates) could further boost performance.
 
 Additional exploration of feature engineering and alternative sampling methods required.
 
@@ -428,5 +437,5 @@ Additional exploration of feature engineering and alternative sampling methods r
 |-------------------|---------------------------|--------------------------|--------------------------------|-----------|
 | Linear Regression | 136204.90                 | 50,681,092,062           | 225124.60                      | 48.48%    |
 | XGBoost           | 103769.60                 | 26,226,219,981           | 161945.10                      | 70.28%    |
-| Random Forest     | 134,830.3                 | 108,808,930,589          | 329862                         | 70.7%     |
+| Random Forest     | 150142                    | 53,792,452,624           | 231932                         | 45.3%     |
 | Lasso             | 0.3695                    | 0.2285                   | 0.4780                         | 45.84%    |
