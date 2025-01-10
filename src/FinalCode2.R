@@ -16,6 +16,7 @@ library(sandwich)
 library(xgboost)
 
 
+
 # Reading the data file 
 data_og <- read.csv("./Final Project/realtorData.csv", sep = ",")
 
@@ -36,7 +37,11 @@ str(data_og)
 (colSums(is.na(data_og)) / nrow(data_og))*100
 
 # visually representing distribution of NAs among variables 
-gg_miss_var(data_og)
+gg_miss_var(data_og) +
+  labs (x = "Variable Names", 
+        y = "Number of missing values") +
+  scale_y_continuous(labels = scales::label_number(accuracy = 1))+
+  theme_bw()
 
 # Our target variable, price, has NAs, therefore dropping all the rows with NA price.
 # Since the variables with largest share of NAs are critical features, instead of removing columns we drop the rows with
@@ -94,8 +99,6 @@ data_og2 <- data_og2 %>%
   filter(state %in% valid_states)
 
 #Creating a composite key as there is no unique ID for house to remove duplicates. 
-#Using all the variables to ensure that the same observation is not included twice (i.e.duplicated)
-#If observation has a different price, different land size it would not be considered a duplicate.
 data_og2 <- data_og2 %>%
   mutate(
     h_id = paste(
@@ -117,14 +120,9 @@ data_og2 <- data_og2 %>%
 
 duplicates <- data_og2[duplicated(data_og2[,"h_id"]), ]
 print(duplicates)
-
 #No duplicates were found 
 
-# As we need to perform certain aggregation removing some variables from h_id that are unsuitable or irrelevant 
-# With brokerage in composite key, the maximum number of sales frequency is 3 without it is 4, 
-# thus broker is excluded from the composite key, since we are analysing overall property sales trend,
-# thus a grouping this granulated is not neccesary.
-
+# Updating the composite key - as we need to perform certain aggregation
 data_og2 <- data_og2 %>%
   mutate(
     h_id = paste(
@@ -153,7 +151,7 @@ clean_data <- clean_data %>%
   mutate(prev_sold_date = as.Date(prev_sold_date)) %>%
   group_by(h_id) %>%
   arrange(desc(prev_sold_date)) %>% # Sort by most recent date
-  slice(1) %>% # Keep the first (most recent) record
+  dplyr::slice(1) %>% # Keep the most recent record
   ungroup() %>%
   dplyr::select(
     h_id, zip_code, street, city, state, house_size,
@@ -181,9 +179,7 @@ ggplot(clean_data, aes(x = house_size)) +
     breaks = seq(0, 7000, by = 1000)
   )
 
-# 75% of the houses are below 2484 square feet.
-# However, the maximum value seems to be extreme
-#Therefore, performing outlier detection using Inter Quartile Range.
+#Performing outlier detection using Inter Quartile Range.
 
 # 1st Quartile - 1362
 Q1_housesize <- 1362
@@ -191,11 +187,9 @@ Q1_housesize <- 1362
 # 3rd Quartile - 2484
 Q3_housesize <- 2484
 
-
 # 50% of the data lies within the range 
 IQR_housesize<- Q3_housesize - Q1_housesize
 lowerbound_house <- Q1_housesize - (1.5*IQR_housesize)  # This means no value needs to be eliminated from the lower end. 
-                                    # No value will be classified as an outlier.
 upperbound_house <- Q3_housesize + (1.5*IQR_housesize)
 
 # Eliminating the outliers 
@@ -203,22 +197,21 @@ clean_data2 <- clean_data%>%
     filter(house_size<= upperbound_house)
 
 # Checking the distribution after outlier removal
-summary(clean_data2$house_size) # The difference between mean and median has reduced, 
-                               # indicating that distribution is closer to normal now.
+summary(clean_data2$house_size) # The difference between mean and median has reduced.
 
 ggplot(clean_data2, aes(x = house_size)) + 
   geom_histogram(bins = 30, fill = "darkgreen", color = "black", alpha = 0.7) +
   labs(
-    title = "Distribution of House Sizes",
-    x = "Size (sq. feet)",
+    title = "Distribution of House Sizes after Outlier Removal",
+    x = "House Size (sq. feet)",
     y = "Count"
   ) +
   theme_bw() +
+  scale_y_continuous(labels =scales::label_number(accuracy = 1) )+
   scale_x_continuous(
     limits = c(0, 5000),
     breaks = seq(0, 5000, by = 500)
   )
-
 
 # representing distribution of BED VARIABLE
 summary(clean_data2$bed) 
@@ -235,8 +228,6 @@ clean_data2 %>%
   )+
   theme_bw()
 
-# 75% of the houses have upto 4 bedrooms.
-#There seem to be an extreme value of 444 beds.
 # Performing an outlier detection using Interquartile range 
 # 1st Quartile - 3
 Q1_bed <- 3
@@ -247,7 +238,6 @@ Q3_bed <- 4
 # 50% of the dataset has bedrooms within the range of
 IQR_bed<- Q3_bed - Q1_bed
 lowerbound_bed <- Q1_bed - (1.5*IQR_bed)
-# No value will be classified as an outlier.
 upperbound_bed <- Q3_bed + (1.5*IQR_bed)
 
 # Eliminating the outlier
@@ -284,9 +274,8 @@ clean_data2 %>%
   )+
   theme_bw()
 
-#75% of the properties have up to 3 bathrooms, however, there seem to be an extreme value of 175 bathrooms
-# Performing an outlier detection using Interquartile range 
 
+# Performing an outlier detection using Interquartile range 
 # 1st Quartile - 2
 Q1_bath <- 2
 
@@ -295,11 +284,7 @@ Q3_bath <- 3
 
 # 50% of the dataset has bedrooms within the range of
 IQR_bath<- Q3_bath - Q1_bath
-lowerbound_bath <- Q1_bath - (1.5*IQR_bath) # The lowerbound is less than the minimum value.
-                                            # That means no outliers exist on the lower end, therefore, 
-                                            # No cut is necessary.
-
-# No value will be classified as an outlier.
+lowerbound_bath <- Q1_bath - (1.5*IQR_bath) # No value will be classified as an outlier.
 upperbound_bath <- Q3_bath + (1.5*IQR_bath)
 
 # Eliminating the outlier
@@ -322,13 +307,12 @@ clean_data2 %>%
   theme_bw()
 
 # Bathroom:Bedroom Ratio - 
-# To inspect how many bathrooms are there per bedroom. 
-# 2 bathrooms more than bedrooms is considered acceptable.
+# To inspect number of  bathrooms are per bedroom. 
 ratiobb <- clean_data2 %>%
   mutate(ratio_bb = bath / bed)
 
 # Summary statistics of the ratio new variable
-summary(ratiobb$ratio_bb) # There are maximum 2 bathrooms per bedroom which is acceptable
+summary(ratiobb$ratio_bb) 
 
 # representing distribution of Acre_lot
 # Converting acres into square_feet to ensure uniformity of units
@@ -346,11 +330,7 @@ ggplot(clean_data2, aes(x = land_size)) +
     x = "Size (sq. feet)",
     y = "Count"
   ) +
-  theme_bw() +
-  scale_x_log10()
-
-# 75% of the properties are built on land <= 18,300 sq.feet.
-# There seems to be a right tail, therefore performing an outlier detection using Interquartile range 
+  theme_bw()
 
 # 1st Quartile - 6098
 Q1_land <- 6098
@@ -361,9 +341,7 @@ Q3_land <- 18300
 # 50% of the dataset has land size within the range of
 IQR_land<- Q3_land - Q1_land
 
-lowerbound_land <- Q1_land - (1.5*IQR_land) # The lowerbound is less than the minimum value.
-                                            # That means no outliers exist on the lower end, therefore, 
-                                            # No cut is necessary
+lowerbound_land <- Q1_land - (1.5*IQR_land) # The Lower bound is less than the minimum value
 upperbound_land <- Q3_land + (1.5*IQR_land)
 
 # Eliminating the outlier
@@ -383,6 +361,10 @@ ggplot(clean_data2, aes(x = land_size)) +
   theme_bw()
 # still has a slight right tail
 
+# Filter out invalid records
+clean_data2 <- clean_data2 %>%
+  filter(land_size > house_size)   
+
 ############
 # Target Variable - Price
 ############
@@ -395,57 +377,46 @@ ggplot(clean_data2, aes(x = price)) +
     x = "Dollars",
     y = "Count"
   ) +
-  theme_bw()+
-  scale_x_log10(labels = scales::label_number())
+  theme_bw() +
+  scale_x_continuous(labels =scales::label_number(accuracy = 1))+
+  scale_y_continuous(labels =scales::label_number(accuracy = 1))
 
 # There are houses with prices ranging from
-#1 dollar - 5,000 dollars in places like New York and California
-# houses with such. low prices are unlikely, thus this seems to be a data entry error
+# 1 dollar - 5,000 dollars houses with such low prices are unlikely
 # Therefore, those should be eliminated
 
 clean_data2 <- clean_data2%>%
   filter(price> 10000)
 
-# Checking the minimum price each state should have based on house_size
+# Checking the minimum price each state should have based on the smallest house_size
 minimum_house_size_by_state <- clean_data2 %>%
   group_by(state) %>%
   filter(house_size == min(house_size, na.rm = TRUE)) %>%
-  slice(1) %>% 
   dplyr::select(state, house_size, price) %>%
   arrange(state)
 
-# Some states do have unrealistically high value for smallhouse/studio apartment 
-# but they are mainly California and New York
-# The lowest price point for a 123 sq feet house in Texas is $160,000 which isn't realistic, 
-
+# Checking the minimum price each state has
 minimum_price_by_state <- clean_data2 %>%
   group_by(state) %>%
   filter(price == min(price, na.rm = TRUE)) %>%
-  slice(1) %>% 
   dplyr::select(state, house_size, price) %>%
   arrange(state)
-
-# Alabama has a price of $8000 for a 1221 square feet apartment.
-
-# As the price per square footage differs based on the states/location, 
-# we will examine the ratio grouped by different states
 
 # Price:House Size Ratio - To assess the price per square footage for different properties.
 ratio_hp <- clean_data2 %>%
   mutate(ratio_hp = price / house_size)
 
 # Summary statistics of Ratio
-summary(ratio$ratio_hp) # The range of ratios varies. from 0.000 to 4487.00
+summary(ratio_hp$ratio_hp) # The range of ratios varies. from 0.000 to 4487.00
 
 # Visual Inspection
-ggplot(ratio, aes(x = ratio_hp)) +
+ggplot(ratio_hp, aes(x = ratio_hp)) +
   geom_histogram(color = "black") +
   labs(x = "Price Per Square Feet", y = "Count") +
   theme_minimal() # There are properties that are for 4000/sq feet which seem like are luxury properties
 
 # Minimum Price per Square Foot Ratio
-
-ratio_min <- ratio %>%
+ratio_min <- ratio_hp %>%
   group_by(state)%>% # Grouped by state to analyse the trend
   filter(ratio_hp==min(ratio_hp)) %>%
   arrange(state) %>%
@@ -453,27 +424,8 @@ ratio_min <- ratio %>%
   print(n=51)%>%
   ungroup()
 
-# Comparing the list of minimum ratio with approximate ranges that typically persist in 
-# residential market of the given state.
-
-# The minimum in California is 37.1 which seems to low. 
-# The usual range for California is 100-200.
-# Delaware is 18.7 when the lowest range is 50-80
-# Alaska seems too high Alaska 215
-# Florida               18.1    too low 
-# Georgia               19.4    too low
-# Michigan               1.89    too low
-# Missouri               0.000615 unreasonably low
-# New York               5.79  too low for new york
-#Ohio                   8.44 
-# Pennsylvania          12.0   
-# South Carolina        16.6     
-# South Dakota          15.6 
-# Virginia              11.1  
-
-
 # Maximum Price per square foot Ratio.
-ratio_max <- ratio %>%
+ratio_max <- ratio_hp %>%
   group_by(state)%>%
   filter(ratio_hp==max(ratio_hp)) %>%
   arrange(state) %>%
@@ -481,7 +433,7 @@ ratio_max <- ratio %>%
   ungroup()
 
 # Average Price per square foot Ratio
-ratio_avg <- ratio %>%
+ratio_avg <- ratio_hp %>%
   group_by(state)%>%
   summarise(ratio_hp = mean(ratio_hp)) %>%
   arrange(state) %>%
@@ -489,11 +441,13 @@ ratio_avg <- ratio %>%
   ungroup()
 
 # Outlier Removal for Target Variable
+lower_percentile <- quantile(clean_data2$price, 0.01)
+upper_percentile <- quantile(clean_data2$price, 0.99)
 
-clean_data_percentile <- clean_data2%>%
+clean_data2 <- clean_data2%>%
   filter(price>= lower_percentile & price<= upper_percentile)
 
-ggplot(clean_data_percentile, aes(x = price)) + 
+ggplot(clean_data2, aes(x = price)) + 
   geom_histogram(bins = 50,fill = "darkgreen", color = "black", alpha = 0.7) +
   labs(
     title = "Distribution of Target Variable",
@@ -501,8 +455,7 @@ ggplot(clean_data_percentile, aes(x = price)) +
     y = "Count"
   ) +
   theme_bw()
-
-summary(clean_data_percentile$price)
+summary(clean_data2$price)
 
 #######
 # Data Sampling 
@@ -510,8 +463,7 @@ summary(clean_data_percentile$price)
 
 # Categorizing the houses based on size, number of bedrooms and baths
 
-
-categorized_data <- clean_data_percentile %>%
+categorized_data <- clean_data2 %>%
   mutate(
     house_size_category = case_when(
       house_size < 1500 ~ "Small",
@@ -673,10 +625,7 @@ region_dummies <- dummy_cols(data_regional, select_columns = "region")[, (ncol(d
 region_dummies <- region_dummies[, -ncol(region_dummies)]
 
 
-# Since city, street, and zip code, brokered_by have extremely high unique values, it is better to frequency encode them to reduce the
-# high dimensionality
-
-# Grouping Variables for dimensionality reduction
+# Grouping Variables based on frequency for Dimensionality reduction
 
 # Grouping zip code below frequency 11
 zip_code_stats <- stratified_sample %>%
@@ -695,7 +644,7 @@ stratified_sample$zip_code <- ifelse(stratified_sample$zip_code %in% zip_stats_l
 # Get the number of unique zip_codes
 length(unique(stratified_sample$zip_code))
 
-# Grouping cities Below frequency 60
+# Grouping cities Below frequency 70
 city_stats <- stratified_sample %>%
   group_by(city) %>%
   summarise(count = n()) %>%
@@ -755,22 +704,22 @@ stratified_sample$brokered_by <- ifelse(
 length(unique(stratified_sample$brokered_by))
 
 # Dummy Variable for city column
-city <- unique(stratified_sample$city) # 4000 unique Variables before grouping.After grouping 14
+city <- unique(stratified_sample$city) 
 city_dummies <- dummy_cols(stratified_sample, select_columns = "city")[, (ncol(stratified_sample) + 1):(ncol(stratified_sample) + length(unique(stratified_sample$city)))]
 city_dummies <- city_dummies[, -ncol(city_dummies)] # Reducing one column to avoid multicollinearity
 
 # Dummy Variable for brokered_by
-brokered_by <- unique(stratified_sample$brokered_by) # 13816 unique values. After grouping 6
+brokered_by <- unique(stratified_sample$brokered_by) 
 broker_dummies <- dummy_cols(stratified_sample, select_columns = "brokered_by")[, (ncol(stratified_sample) + 1):(ncol(stratified_sample) + length(unique(stratified_sample$brokered_by)))]
 broker_dummies <- broker_dummies[, -ncol(broker_dummies)]
 
 # Dummy Variable for street
-street <- unique(stratified_sample$street) # 28412 unique values. 6 after grouping
+street <- unique(stratified_sample$street) 
 street_dummies <- dummy_cols(stratified_sample, select_columns = "street")[, (ncol(stratified_sample) + 1):(ncol(stratified_sample) + length(unique(stratified_sample$street)))]
 steet_dummies <- street_dummies[, -ncol(street_dummies)] # too large for my laptop to run. We want to keep the analysis state level so we will exclude streets.
 
 # Dummy Variable for zip_code
-zip_code <- unique(stratified_sample$zip_code) # 7000 unique values. 23 after grouping
+zip_code <- unique(stratified_sample$zip_code)
 zipcode_dummies <- dummy_cols(stratified_sample, select_columns = "zip_code")[, (ncol(stratified_sample) + 1):(ncol(stratified_sample) + length(unique(stratified_sample$zip_code)))]
 zipcode_dummies <- zipcode_dummies[, -ncol(zipcode_dummies)]
 
@@ -804,23 +753,23 @@ test_data <- data_final[-Index, ]
 
 
 ######
-# Estimating Linear Regression model
+# Building Linear Regression model
 #####
 
 # Excluding unique_ID as it is not needed for estimating the model
 train_data <- train_data %>%
   dplyr::select(-"h_id")
 
-
 # Forward Selection of Regressors
+
 # Setting up a variable 'regressors' that contains all regressors except the dependent variable
 names(train_data) <- gsub(" ", "_", names(train_data)) # Replacing spaces in column names with underscores
 regressors <- names(train_data)[names(train_data) != "price"]
 
 # Beginning with a null model i.e. with only intercept
-current_model <- lm(as.formula(paste("price ~ 1")), data = train_data) # intercept-only model
-selected_regressors <- c() # Empty list to store the selected predictor
-remaining_regressors <- regressors # Regressors that still need to be evaluated
+current_model <- lm(as.formula(paste("price ~ 1")), data = train_data) 
+selected_regressors <- c() 
+remaining_regressors <- regressors 
 best_model <- current_model
 best_rss <- sum(residuals(best_model)^2) # Compute RSS for the intercept-only model
 
@@ -852,7 +801,7 @@ for (i in seq_along(regressors)) {
     best_rss <- rss_values[best_model_index]
     print(paste("Added predictor:", selected_regressors[length(selected_regressors)]))
   } else {
-    break # Stops if there is no improvement in RSS
+    break 
   }
 }
 
@@ -865,40 +814,46 @@ final_regressors <- c(
   "state_California",
   "brokered_by_16829",
   "state_Washington",
+  "state_Florida",
   "state_Massachusetts",
-  "state_Oregon",
-  "state_Hawaii",
-  "state_District_of_Columbia",
-  "state_Ohio",
-  "zip_code_92223",
-  "sale_frequency",
-  "zip_code_92336",
-  "status_for_sale ",
-  "brokered_by_22611",
-  "bed",
-  "city_San_Antonio",
-  "city_Houston",
-  "city_other",
-  "state_Missouri",
-  "city_Philadelphia",
-  "state_Oklahoma",
-  "state_Kansas",
-  "state_Kentucky",
-  "state_Mississippi",
-  "state_Indiana",
-  "city_Phoenix",
+  "state_Arizona",
+  "state_Colorado",
   "state_Nevada",
-  "state_Arkansas",
-  "state_West_Virginia",
-  "state_Louisiana",
-  "state_Alabama"
+  "state_Idaho",
+  "state_New_Jersey",
+  "city_Sacramento",
+  "state_District_of_Columbia",
+  "state_Connecticut",
+  "state_Rhode_Island", 
+  "state_Utah", 
+  "city_Dallas", 
+  "state_Montana", 
+  "bed",   
+  "status_for_sale", 
+  "brokered_by_22611", 
+  "sale_frequency", 
+  "city_Portland", 
+  "state_New_Hampshire", 
+  "zip_code_92336", 
+  "zip_code_32404", 
+  "zip_code_34491",
+  "city_Charlotte", 
+  "zip_code_85614",
+  "city_Fort_Worth",
+  "city_Saint_Louis",
+  "city_other",
+  "city_Houston",
+  "city_Phoenix"
 )
 
 
 # Model 1: linear-linear relationship
 
 # Visualizing the relationship
-plot(train_data$house_size, train_data$price)
+plot(train_data$house_size, train_data$price,
+     xlab = "House Size (sq ft)",
+     ylab = "Price ($)",
+     main = "Relationship between House Size and Price")
 
 lm1 <- lm(as.formula(paste(
     "price ~", paste(final_regressors, collapse = "+")
@@ -917,23 +872,13 @@ plot((train_data$house_size),
   log(train_data$price),
   xlab = "House Size",
   ylab = "Log of Price",
-  main = "Log(Price) vs House Size"
+  main = "Log-Linear Relationship"
 ) # shows a positive correlation
-
-plot(train_data$land_size,
-  log(train_data$price),
-  xlab = "Land Size",
-  ylab = "Log of Price",
-  main = "Log(Price) vs Land Size"
-) # however, weak correlation between land size and price,
-# there are significant outliers.
 
 lm2 <-lm(as.formula(paste(
     "log(price) ~", paste(final_regressors, collapse = "+")
   )), data = train_data)
 summary(lm2)
-
-
 
 #  Plotting to check residuals
 par(mfrow = c(2, 2))
@@ -946,15 +891,9 @@ plot(log(train_data$house_size),
   log(train_data$price),
   xlab = "Log of House Size",
   ylab = "Log of Price",
-  main = "Log-Log Model"
+  main = "Log-Log Relationship"
 )
 
-plot(log(train_data$land_size),
-  log(train_data$price),
-  xlab = "Log of Land Size",
-  ylab = "Log of Price",
-  main = "Log-Log Model"
-)
 
 #Final Regressor without Land_size
 final_regressors2 <- c(
@@ -962,33 +901,36 @@ final_regressors2 <- c(
   "state_California",
   "brokered_by_16829",
   "state_Washington",
+  "state_Florida",
   "state_Massachusetts",
-  "state_Oregon",
-  "state_Hawaii",
-  "state_District_of_Columbia",
-  "state_Ohio",
-  "zip_code_92223",
-  "sale_frequency",
-  "zip_code_92336",
-  "status_for_sale ",
-  "brokered_by_22611",
-  "bed",
-  "city_San_Antonio",
-  "city_Houston",
-  "city_other",
-  "state_Missouri",
-  "city_Philadelphia",
-  "state_Oklahoma",
-  "state_Kansas",
-  "state_Kentucky",
-  "state_Mississippi",
-  "state_Indiana",
-  "city_Phoenix",
+  "state_Arizona",
+  "state_Colorado",
   "state_Nevada",
-  "state_Arkansas",
-  "state_West_Virginia",
-  "state_Louisiana",
-  "state_Alabama"
+  "state_Idaho",
+  "state_New_Jersey",
+  "city_Sacramento",
+  "state_District_of_Columbia",
+  "state_Connecticut",
+  "state_Rhode_Island", 
+  "state_Utah", 
+  "city_Dallas", 
+  "state_Montana", 
+  "bed",   
+  "status_for_sale", 
+  "brokered_by_22611", 
+  "sale_frequency", 
+  "city_Portland", 
+  "state_New_Hampshire", 
+  "zip_code_92336", 
+  "zip_code_32404", 
+  "zip_code_34491",
+  "city_Charlotte", 
+  "zip_code_85614",
+  "city_Fort_Worth",
+  "city_Saint_Louis",
+  "city_other",
+  "city_Houston",
+  "city_Phoenix"
 )
 
 lm3 <-lm(as.formula(
@@ -1007,13 +949,9 @@ plot(lm3)
 
 # Model 4: Multi-linear regressions with house size, land size, baths, beds and sale frequency
 
-# Visualizing the relationship
-plot(train_data$bath, log(train_data$price))
-plot(train_data$bed, log(train_data$price))
-lm4 <- lm(log(price) ~ log(house_size) + land_size + bath + bed, train_data)
+lm4 <- lm(log(price) ~ log(house_size) + state_California + bath + bed, train_data)
 summary(lm4)
 
-# The r squared is 35.29% while the residual standard error is 0.6413
 # Plotting to check residuals
 par(mfrow = c(2, 2))
 plot(lm4)
@@ -1022,39 +960,15 @@ plot(lm4)
 lm5 <- lm(as.formula(paste("log(price)~house_size*land_size+", paste(final_regressors2, collapse = "+"))), data = train_data)
 summary(lm5)
 
-# The r squared is 57.18% while the residual standard error is 0.5237
 # Plotting to check residuals
 par(mfrow = c(2, 2))
 plot(lm5)
 
-# Model 6:  land size polynomial term
-final_regressors3 <- c(
-  "bath", "house_size", "state_California",
-  "brokered_by_16829", "state_Washington", "state_Florida", "state_Massachusetts", "state_Hawaii", "state_Arizona",
-  "state_Oregon", "state_New_York", "bed", "state_District_of_Columbia",
-  "state_Idaho", "state_New_Jersey", "state_Nevada", "state_Colorado",
-  "status_for_sale ", "state_Rhode_Island", "city_Dallas", "brokered_by_22611"
-)
-
-lm6 <- lm(as.formula(paste("log(price)~land_size+ I(land_size^2)+", paste(final_regressors3, collapse = "+"))), data = train_data)
-summary(lm6)
-
-# Plotting to check residuals
-par(mfrow = c(2, 2))
-plot(lm6)
-
-# Model 7: house size, land size interaction term and polynomial
-lm7 <- lm(as.formula(paste("log(price)~house_size*land_size+ I(land_size^2)+", paste(final_regressors2, collapse = "+"))), data = train_data)
-summary(lm7)
-
-# Plotting to check residuals
-par(mfrow = c(2, 2))
-plot(lm7)
-
 # Bp test to check if the Residuals are Homosckedatsic
-bptest(lm3) # Reject the null hypothesis, since the breusch-pagan test still suggest that the errors are heterosckedastic, we will then use robust se.
-robust_se <- coeftest(lm3, vcov = vcovHC(lm3, type = "HC1"))
-print(robust_se)
+bptest(lm3) 
+lm3_se <- coeftest(lm3, vcov = vcovHC(lm3, type = "HC1"))
+print(lm3_se)
+# The errors are heterosckedastic 
 
 # Splitting data set into test, train and validation for data_regional_final
 set.seed(125)
@@ -1120,54 +1034,65 @@ for (i in seq_along(regressors)) {
 # Final features
 feature_selection2 <- summary(best_model)
 
-regressors_regional <- c("house_size",
+regressors_regional <- c(
                         "region_Midwest",
                         "region_South",
                         "region_Northeast",
                         "bath",
                         "brokered_by_16829",
-                        "city_Los_Angeles",
                         "brokered_by_22611",
                          "city_other",
-                         "city_Dallas",
-                         "city_Tampa",
-                         "sale_frequency",
-                         "zip_code_85122",
-                         "zip_code_84043",
-                         "city_Charlotte",
-                         "city_Orlando",
-                         "zip_code_29910",
-                         "city_Houston",
-                         "city_Saint_Louis",
-                         "city_Richmond",
-                         "city_Fort_Worth",
-                         "city_San_Antonio",
-                         "city_Philadelphia",
-                         "city_Oklahoma_City",
+                        "bed",
+                         "zip_code_85614",
+                         "brokered_by_71243",
                          "city_Phoenix",
-                         "zip_code_92223",
-                         "land_size",
-                         "zip_code_79938"
+                         "zip_code_85338",
+                         "zip_code_85375",
+                         "city_Charlotte",
+                         "sale_frequency",
+                         "city_Orlando",
+                         "zip_code_85710",
+                         "city_Dallas",
+                         "city_Saint_Louis",
+                         "city_Houston",
+                         "city_Fort_Worth",
+                         "city_Richmond",
+                         "city_Portland",
+                         "city_Sacramento",
+                         "city_San_Antonio"
                          )
 
-# Model 8: Replacing states with regional Dummies
+# Model 6: Replacing states with regional Dummies
 
-lm8 <-lm(as.formula(
+lm6 <-lm(as.formula(
   paste(
-    "log(price) ~",
+    "log(price) ~ log(house_size)+",
     paste(regressors_regional, collapse = "+")
   )
 ), data = train_regional_data)
 
-summary(lm8)
+summary(lm6)
+
+# Bp test to check if the Residuals are Homosckedatsic
+bptest(lm6) 
+robust_se2 <- coeftest(lm6, vcov = vcovHC(lm6, type = "HC1"))
+
 
 #####
 # Predictions using the fitted model
 #####
-# Model 3 vs model 6
-# Interpretation 1% increase in house_size results in a 0.5% increase in price as a log-log model is used
+# Model 3 is the chosen model
 names(test_data) <- gsub(" ", "_", names(test_data)) # Replacing spaces in column names with underscores
-predicted_price <- exp(predict(lm6, newdata = test_data))
+predicted_price <- exp(predict(lm3, newdata = test_data))
+
+# Adjust intervals using robust variance-covariance
+robust_interval <- predict(lm3, newdata = test_data, interval = "confidence", se.fit = TRUE)
+
+robust_predictions <- data.frame(
+  fit = robust_interval$fit,
+  lwr = robust_interval$fit - 1.96 * sqrt(diag(lm3_se)),
+  upr = robust_interval$fit + 1.96 * sqrt(diag(lm3_se))
+)
 
 # Accuracy of chosen models
 actuals <- test_data$price
@@ -1182,7 +1107,6 @@ cat("MAE:", MAE, "\nMSE:", MSE, "\nRMSE:", RMSE, "\nR2:", R2)
 
 
 # Plotting actual vs predicted price
-
 results_df <- data.frame(
   Actual = actuals,
   Predicted = predicted_price
@@ -1206,12 +1130,15 @@ ggplot(results_df, aes(x = Actual, y = Predicted)) +
 # XG boost
 ####
 
-# Label encode categorical variables
+#Read the sampled data
 
+stratified_sample <- read.csv("sampled_data.csv", sep = ",")
+
+# Label encode categorical variables
 # Extract column names that are not numeric
 categorical <- names(stratified_sample)[sapply(stratified_sample, function(x) !is.numeric(x))]
 
-# Convert these columns to factor (equivalent of Pandas 'category')
+# Convert these columns to factor 
 stratified_sample[categorical] <- lapply(stratified_sample[categorical], as.factor)
 stratified_sample[categorical] <- lapply(stratified_sample[categorical], as.integer)
 
@@ -1220,7 +1147,7 @@ stratified_sample[categorical] <- lapply(stratified_sample[categorical], as.inte
 Index <- createDataPartition(
   y = stratified_sample$price,
   p = .70, # The percentage of data in the training set
-  list = FALSE # The format of the results
+  list = FALSE 
 )
 
 # Splitting into training and test dataset using the Index created above
@@ -1241,51 +1168,7 @@ y_test <- TestDataXG$price
 dtrain <- xgb.DMatrix(data = x_train, label = y_train)
 dtest <- xgb.DMatrix(data = x_test, label = y_test)
 
-###
-# Training the XGBoost model using hyperparameters using grid search & CV
-###
-set.seed(1)
-# Define hyperparameters for XGBoost using grid search
-param_grid <- expand.grid(
-  max_depth = c(3, 5, 7),
-  eta = c(0.01, 0.1, 0.2),
-  subsample = c(0.6, 0.8, 1.0),
-  colsample_bytree = c(0.6, 0.8, 1.0)
-)
 
-
-# Variables to store results
-best_rmse <- Inf
-best_params <- NULL
-
-# Loop through parameter grid
-for (i in 1:nrow(param_grid)) {
-  params <- list(
-    objective = "reg:squarederror",
-    eta = param_grid[i, "eta"],
-    max_depth = param_grid[i, "max_depth"],
-    subsample = param_grid[i, "subsample"],
-    colsample_bytree = param_grid[i, "colsample_bytree"]
-  )
-  
-  # Performing  cross-validation on training dataset
-  cv_results <- xgb.cv(
-    params = params,
-    data = dtrain,
-    nrounds = 150,
-    nfold = 5,
-    metrics = "rmse",
-    early_stopping_rounds = 10,
-    verbose = 0
-  )
-  
-  # Tracking the best parameters
-  mean_rmse <- min(cv_results$evaluation_log$test_rmse_mean)
-  if (mean_rmse < best_rmse) {
-    best_rmse <- mean_rmse
-    best_params <- params
-  }
-}
 ###
 # Training the XGBoost model using hyperparameters using grid search & CV
 ###
@@ -1392,9 +1275,9 @@ print(best_rmse_RS)
 # The Grid Search had the lower RMSE so we will evaluate the final model using those parameters
 final_params <- list(
   objective = "reg:squarederror",
-  eta = 0.2,
+  eta = 0.1,
   max_depth = 7,
-  subsample = 1,
+  subsample = 0.8,
   colsample_bytree = 0.6
 )
 
@@ -1411,20 +1294,17 @@ xgb_model_cv <- xgb.train(
 y_pred_cv <- predict(xgb_model_cv, newdata = dtest)
 
 
-xgb.model.dt.tree(xgb_model_cv)
-
 # Calculate evaluation metrics
-mae_cv <- mean(abs(y_pred_cv - TestData$price))
-mse_cv <- mean((y_pred_cv - TestData$price)^2)
+mae_cv <- mean(abs(y_pred_cv - TestDataXG$price))
+mse_cv <- mean((y_pred_cv - TestDataXG$price)^2)
 rmse_cv <- sqrt(mse_cv)
-r2_cv <- 1 - (sum((TestData$price - y_pred_cv)^2) / sum((TestData$price - mean(TestData$price))^2))
+r2_cv <- 1 - (sum((TestDataXG$price - y_pred_cv)^2) / sum((TestDataXG$price - mean(TestDataXG$price))^2))
 
 
 # Print evaluation metrics
-cat("Mean Absolute Error (MAE):", mae_cv, "\n") 
-cat("Mean Squared Error (MSE):", mse_cv, "\n")
-cat("Root Mean Squared Error (RMSE):", rmse_cv, "\n")
-cat("R-squared (R2):", r2_cv, "\n")
+cat("MAE:", mae_cv, "\nMSE:", mse_cv, "\nRMSE:", rmse_cv, "\nR2:", r2_cv)
 
-# checking the important features in the model
-importance <- xgb.importance(model = xgb_model_cv)
+#MAE: 103769.6 
+#MSE: 26226219981 
+#RMSE: 161945.1 
+#R2: 0.7028739
