@@ -431,7 +431,13 @@ Additional exploration of feature engineering and alternative sampling methods r
 | Linear Regression | 136,204.90                | 50,681,092,062           | 225,124.60                     | 48.48%    |
 | XGBoost           | 103,769.60                | 26,226,219,981           | 161,945.10                     | 70.28%    |
 | Random Forest     | 150,142                   | 53,792,452,624           | 231,932                        | 45.3%     |
-| Lasso             | 0.3695                    | 0.2285                   | 0.4780                         | 45.84%    |
+| Lasso             | 109,236                   | 19,961,324,872           | 141,285                        | 42.92%    |
+
+- XGBoost has the lowest MAE at $103,769.60, indicating it makes the smallest average prediction error, closely followed by Lasso, while RandomForest has the highest. In terms of MAE, XGBoost consistently provides more accurate predictions compared to the other models. 
+- XGBoost also shows the highest R-Squared at 70.28%, indicating it explains the largest proportion of variance in house prices. Linear Regression achieves 48.48%, and Random Forest lags behind at 45.3%.
+- Lasso performs well in terms of RMSE at $141,285 followed closely by XGBoost at $161,945.10, reflecting its superior handling of extreme price variations while Random Forest ($231,932) performs the worst.
+
+XGBoost outperforms the other models in all key metrics, with the lowest MAE and RMSE and the highest R², making it the most accurate and reliable model for predicting house prices. Lasso Regression also shows competitive performance, particularly in managing large errors (MSE), while Random Forest and Linear Regression are less effective for this task in the given dataset. The lower performance of Random Forest could be due to insufficient hyperparameter tuning, overfitting on outliers, or its inability to fully capture the patterns.
 
 ## Appendix
 Extra and Preliminary visualizations 
