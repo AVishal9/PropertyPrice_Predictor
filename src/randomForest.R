@@ -1,47 +1,69 @@
+library(tidyverse)
 library(randomForest)
 library(caret)
+library(fastDummies)
 
+house_data <- sampled_data.csv
 
-house_data_clean <- readRDS("data_processed/house_data_clean.rds")
+set.seed(123)
 
-##Target encoding: Replacing by mean
+# Define regions
+northeast <- c("Connecticut", "Maine", "Massachusetts", "New Hampshire",
+               "Rhode Island", "Vermont", "New Jersey", "New York",
+               "Pennsylvania")
+midwest <- c("Illinois", "Indiana", "Michigan", "Ohio", "Wisconsin",
+             "Iowa", "Kansas", "Minnesota", "Missouri",
+             "Nebraska", "North Dakota", "South Dakota")
+west <- c("Arizona", "Colorado", "Idaho", "Montana", "Nevada",
+          "New Mexico", "Utah", "Wyoming", "Alaska", "California",
+          "Hawaii", "Oregon", "Washington")
+south <- c("Delaware", "Florida", "Georgia", "Maryland",
+           "North Carolina", "South Carolina", "Virginia",
+           "West Virginia", "District of Columbia",
+           "Alabama", "Kentucky", "Mississippi",
+           "Tennessee", "Arkansas", "Louisiana",
+           "Oklahoma", "Texas")
 
-# Calculate mean price for each city
-city_encoding <- house_data_clean %>%
-  group_by(city) %>%
-  summarize(city_mean_price = mean(price, na.rm = TRUE))
+# Add region column
+house_data <- house_data %>%
+  mutate(
+    region = case_when(
+      state %in% northeast ~ "Northeast",
+      state %in% midwest ~ "Midwest",
+      state %in% west ~ "West",
+      state %in% south ~ "South",
+      TRUE ~ "Other"
+    )
+  )
 
-house_data_clean <- house_data_clean %>%
-  left_join(city_encoding, by = "city")
+# One-hot encode region and status
+house_data <- house_data %>%
+  dummy_cols(select_columns = c("region", "status"), remove_selected_columns = TRUE)
 
-# Calculate mean price for each state
-state_encoding <- house_data_clean %>%
-  group_by(state) %>%
-  summarize(state_mean_price = mean(price, na.rm = TRUE))
+# Frequency encode high-cardinality features
+city_freq <- house_data %>%
+  count(city, name = "city_freq")
+house_data <- house_data %>%
+  left_join(city_freq, by = "city") %>%
+  mutate(city = NULL)  # Drop original column
 
-house_data_clean <- house_data_clean %>%
-  left_join(state_encoding, by = "state") %>% 
-  select(-city, -state)
+# Select relevant features
+features <- house_data %>%
+  select(-street, -state, -brokered_by, -zip_code, -h_id, -X)
 
-##Processing
-set.seed(123)  
+# Train-test split
+trainIndex <- createDataPartition(features$price, p = 0.8, list = FALSE)
+train_data <- features[trainIndex, ]
+test_data <- features[-trainIndex, ]
 
-house_data <- house_data_clean[, c("price", "house_size", "bed", "bath", 
-                                   "land_size", "city_mean_price", "state_mean_price")] 
-
-# Split into training and testing sets
-trainIndex <- createDataPartition(house_data$price, p = 0.8, list = FALSE)
-train_data <- house_data[trainIndex, ]
-test_data <- house_data[-trainIndex, ]
-
-# Define tuning grid 
+# Define tuning grid
 tune_grid <- expand.grid(
   mtry = c(2, 4, 6),       # Number of variables randomly sampled at each split
   splitrule = "variance",  
-  min.node.size = c(1, 5, 10)  
+  min.node.size = c(1, 5, 10)
 )
 
-# Train the Random Forest model with cross-validation and grid search
+# Train Random Forest model with cross-validation and grid search
 control <- trainControl(method = "cv", number = 10, search = "grid")
 
 rf_model <- train(price ~ ., data = train_data,
@@ -51,7 +73,6 @@ rf_model <- train(price ~ ., data = train_data,
                   num.trees = 1000,
                   importance = "impurity")
 
-
 # Feature importance
 importance <- varImp(rf_model, scale = FALSE)
 print(importance)
@@ -60,19 +81,15 @@ plot(importance, top = 5, main = "Feature Importance")
 # Evaluate on test data
 predictions <- predict(rf_model, newdata = test_data)
 rmse <- sqrt(mean((test_data$price - predictions)^2))
-mse <- rmse*rmse
 mae <- mean(abs(predictions - test_data$price))
 r_squared <- 1 - sum((test_data$price - predictions)^2) / sum((test_data$price - mean(test_data$price))^2)
 
-results <- rbind(
-  data.frame(
-    RMSE = rmse,
-    MAE = mae,
-    MSE = mse,
-    R_Squared = r_squared
-  )
+results <- data.frame(
+  RMSE = rmse,
+  MAE = mae,
+  R_Squared = r_squared
 )
-
+print(results)
 
 rf2 <- train(price ~ ., data = train_data, 
              method = "rf", 
@@ -97,5 +114,3 @@ results2 <- rbind(
   )
 )
 
-
-}
