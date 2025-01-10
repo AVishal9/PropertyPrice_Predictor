@@ -162,25 +162,10 @@ This heatmap illustrates the correlation between numeric variables in the datase
 knitr::include_graphics("./PropertyPrice_Predictor/plots/Corr_matrix.png")
 ```
 
-```{r echo=FALSE, out.width="49%", fig.align='center',fig.cap= "Affordable Vs Luxury Houses"}
-knitr::include_graphics("./plots/affordable_vs_luxury_prices.png")
-```
-
-```{r echo=FALSE,out.width="49%", fig.align='center',fig.cap= "Average Price per state"}
-knitr::include_graphics("./plots/average_price_per_state.png")
-```
-
 ```{r echo=FALSE,out.width="49%", fig.align='center',fig.cap= "Distribution of Price"}
 knitr::include_graphics("./plots/price_distribution_categories.png")
 ```
 
-```{r echo=FALSE, out.width="49%", fig.align='center',fig.cap= "Top Affordable States"}
-knitr::include_graphics("./plots/top_affordable_states.png")
-```
-
-```{r echo=FALSE, out.width="49%", fig.align='center',fig.cap= "Top Luxury States."}
-knitr::include_graphics("./plots/top_luxury_states.png")
-```
 
 # Models
 
@@ -389,7 +374,7 @@ The final chosen variables were - Target variable: price - Continuous variables:
 
 A stratified sampling technique was used to split the data into training (80%) and testing (20%) sets. Stratification ensured that the price distribution in the training and testing sets closely matched the overall dataset which minimizes potential sampling bias.
 
-**Hyperparameter Tuning**
+### Hyperparameter Tuning
 
 To optimize the Random Forest model, a structured grid search with cross-validation was implemented:
 
@@ -401,7 +386,7 @@ To optimize the Random Forest model, a structured grid search with cross-validat
 
 This tuning process identified the optimal hyperparameters, resulting in the best performance on test data.
 
-**Model Evaluation**
+### Model Evaluation
 
 The model was evaluated on the test dataset
 
@@ -426,7 +411,7 @@ This aligns with domain knowledge that house size, and geographic factors influe
 
 **Comparison of Variants** Two Random Forest implementations were compared: 1. Using `ranger`: Faster training with cross-validation and target encoding resulted in robust performance. 2. Using `rf`: Provided similar performance metrics but required more computational time. Both implementations yielded comparable RMSE, MAE and $R^2$, showing the model's consistency across frameworks.
 
-**Challenges and Limitations**  
+### Challenges and Limitations
 Initially target encoding was implemented by replacing state and city variables with their resepctive house price average, but their vaibility is questionable. We also experimented with label encoding, where hierarchical labels were assigned to states to capture their influence on prices, but this approach posed risks of train-test data leakage. - Additional domain-specific features (e.g., proximity to amenities, crime rates) could further boost performance.
 
 Additional exploration of feature engineering and alternative sampling methods required.
@@ -435,7 +420,26 @@ Additional exploration of feature engineering and alternative sampling methods r
 
 | Model             | Mean Absolute Error (MAE) | Mean Squared Error (MSE) | Root Mean Squared Error (RMSE) | R-Squared |
 |-------------------|---------------------------|--------------------------|--------------------------------|-----------|
-| Linear Regression | 136204.90                 | 50,681,092,062           | 225124.60                      | 48.48%    |
-| XGBoost           | 103769.60                 | 26,226,219,981           | 161945.10                      | 70.28%    |
-| Random Forest     | 150142                    | 53,792,452,624           | 231932                         | 45.3%     |
+| Linear Regression | 136,204.90                | 50,681,092,062           | 225,124.60                     | 48.48%    |
+| XGBoost           | 103,769.60                | 26,226,219,981           | 161,945.10                     | 70.28%    |
+| Random Forest     | 150,142                   | 53,792,452,624           | 231,932                        | 45.3%     |
 | Lasso             | 0.3695                    | 0.2285                   | 0.4780                         | 45.84%    |
+
+## Appendix
+Extra visualizations 
+
+```{r echo=FALSE, out.width="49%", fig.align='center',fig.cap= "Top Affordable States"}
+knitr::include_graphics("./plots/top_affordable_states.png")
+```
+
+```{r echo=FALSE, out.width="49%", fig.align='center',fig.cap= "Top Luxury States."}
+knitr::include_graphics("./plots/top_luxury_states.png")
+```
+
+```{r echo=FALSE, out.width="49%", fig.align='center',fig.cap= "Affordable Vs Luxury Houses"}
+knitr::include_graphics("./plots/affordable_vs_luxury_prices.png")
+```
+
+```{r echo=FALSE,out.width="49%", fig.align='center',fig.cap= "Average Price per state"}
+knitr::include_graphics("./plots/average_price_per_state.png")
+```
