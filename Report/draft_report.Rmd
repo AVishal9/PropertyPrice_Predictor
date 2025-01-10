@@ -312,40 +312,53 @@ R-Squared: The model explains 70.28% variability seen in the target value.
 
 Lasso regression is a linear regression method with regularization that shrinks less important feature coefficients to zero, effectively performing feature selection. It helps reduce multicollinearity, prevent overfitting, and improves model interpretability. In this project, Lasso is useful for identifying key factors like house_size and bath while excluding irrelevant ones. This ensures better predictions and a simpler, more robust model.
 
-**Variable Added**
+### Implementation of Lasso Regression.
 
-**Log-Transformed Features:**
+The implementation involved the following steps:
+**Data Preprocessing:**
+  -   We applied log transformations to key numerical variables like price, house size, and land size. This reduced skewness and stabilized variance, ensuring linear relationships between variables.
+  -   We scaled the numerical features to standardize their values, which is crucial for regularized regression techniques like Lasso.
+  One-hot encoding was applied to categorical variables, such as state, to convert them into numerical format.
+**Feature Engineering:**
+Several new features were created to capture complex relationships in the data:
+  **Price per square foot:** An indicator of property value relative to size.
+  **Bed-to-bath ratio:** Captures balance between bedrooms and bathrooms.
+  **Land-to-house size ratio:** Reflects the proportion of land to house size.
+  **Bed-bath interaction:** Highlights the combined effect of these features.
+  **Total rooms:** Sum of bedrooms and bathrooms, indicating house capacity.
+  **Room-size interaction:** Captures the relationship between total rooms and house size.
+**Outlier Removal:**
+  Extreme outliers in price and price_per_sqft were removed using the interquartile range (IQR) method. This helped reduce the influence of extreme values on the model.
+**Splitting Data:**
+  The dataset was split into 80% training data and 20% testing data to evaluate the model's performance on unseen data.
+**Cross-Validation:**
+  We used 10-fold cross-validation to identify the best regularization parameter (λλ).
+  The cv.glmnet() function automatically split the training data into 10 subsets. The model was trained on 9 subsets and validated on the 10th, repeating the process for all subsets.
+  The best λλ was selected based on the lowest mean squared error (MSE).
+**Model Training:**
+  Lasso regression was trained using the features and target variable (log_price).
+  After training, irrelevant or less impactful features had their coefficients shrunk to zero.
+### Model Evaluation
 
-log_price, log_house_size, log_land_size:Stabilize variance and linearize relationships.
+After training the Lasso regression model, its performance was evaluated on the test dataset. Key metrics were computed to assess its predictive ability, as summarized below:
+| Metric                         | Value           |
+|--------------------------------|-----------------|
+| Root Mean Squared Error (RMSE) | 141,285         |
+| Mean Absolute Error (MAE)      | 109,236         |
+| Mean Squared Error (MSE)       | 19,961,324,872  |
+| R-Squared                      | 42.9%           |
 
-**Engineered Features:**
+###Interpretation:
 
-bed_bath_ratio land_to_house_ratio bed_bath_interaction total_rooms rooms_size_interaction
+**MAE:** On average, the model's predictions deviate by approximately $109,236 from the actual property prices.
+**RMSE:** The average prediction error is $141,285, with higher weights for larger errors.
+**R-Squared:** The model explains 42.92% of the variability in property prices, indicating moderate predictive power.
+ 
+-   The most significant predictor is log_house_size, indicating that house size plays a dominant role in determining property prices.
+-   Features like log_land_size, bed, bath, and bed_bath_interaction were deemed non-contributory by Lasso, as their coefficients were shrunk to zero.
+-   bed_bath_ratio and total_rooms also play a role in influencing prices, though their effects are smaller compared to house size.
+-   The Lasso model has effectively removed irrelevant or redundant features, simplifying the model while retaining key predictors.
 
-**One-Hot Encoded Categorical Variables:**
-
-States (state) were converted into dummy variables for better model compatibility.
-
-**Fine-Tuning**
-
-The lambda was fine-tuned using a grid search over a wide range of values (10\^−4 to 10\^1).
-
-**Cross-Validation**
-
-10-fold cross-validation was used to evaluate model performance.
-
-**Key Coefficients**
-
-House Size (log_house_size): The most significant predictor, where doubling house size increases price by \~132%. Bathrooms (bath): Adding one bathroom increases price by \~7.6%. Total Rooms (total_rooms): Adding one additional room increases price by \~4.2%. Room-to-Bathroom Balance (bed_bath_ratio): A higher ratio of bedrooms to bathrooms reduces price by \~16.4%. Key Coefficients
-
-**Performance Metrics**
-
-| Metric                         | Value  |
-|--------------------------------|--------|
-| Root Mean Squared Error (RMSE) | 0.4780 |
-| Mean Absolute Error (MAE)      | 0.3695 |
-| Mean Squared Error (MSE)       | 0.2285 |
-| R-Squared                      | 45.84% |
 
 ## Model: Random Forest
 
