@@ -319,33 +319,41 @@ Lasso regression is a linear regression method with regularization that shrinks 
 
 ### Implementation of Lasso Regression.
 
-The implementation involved the following steps:
 **Data Preprocessing:**
-  -   We applied log transformations to key numerical variables like price, house size, and land size. This reduced skewness and stabilized variance, ensuring linear relationships between variables.
-  -   We scaled the numerical features to standardize their values, which is crucial for regularized regression techniques like Lasso.
-  One-hot encoding was applied to categorical variables, such as state, to convert them into numerical format.
+
+- We applied log transformations to key numerical variables like price, house size, and land size. This reduced skewness and stabilized variance, ensuring linear relationships between variables.
+- We scaled the numerical features to standardize their values, which is crucial for regularized regression techniques like Lasso.
+- One-hot encoding was applied to categorical variables, such as state, to convert them into numerical format.
+
 **Feature Engineering:**
 Several new features were created to capture complex relationships in the data:
-  **Price per square foot:** An indicator of property value relative to size.
-  **Bed-to-bath ratio:** Captures balance between bedrooms and bathrooms.
-  **Land-to-house size ratio:** Reflects the proportion of land to house size.
-  **Bed-bath interaction:** Highlights the combined effect of these features.
-  **Total rooms:** Sum of bedrooms and bathrooms, indicating house capacity.
-  **Room-size interaction:** Captures the relationship between total rooms and house size.
+
+ -  **Price per square foot:** An indicator of property value relative to size.
+ -  **Bed-to-bath ratio:** Captures balance between bedrooms and bathrooms.
+ -  **Land-to-house size ratio:** Reflects the proportion of land to house size.
+ -  **Bed-bath interaction:** Highlights the combined effect of these features.
+ -  **Total rooms:** Sum of bedrooms and bathrooms, indicating house capacity.
+ -  **Room-size interaction:** Captures the relationship between total rooms and house size.
+
 **Outlier Removal:**
   Extreme outliers in price and price_per_sqft were removed using the interquartile range (IQR) method. This helped reduce the influence of extreme values on the model.
+
 **Splitting Data:**
   The dataset was split into 80% training data and 20% testing data to evaluate the model's performance on unseen data.
+
 **Cross-Validation:**
   We used 10-fold cross-validation to identify the best regularization parameter (λλ).
   The cv.glmnet() function automatically split the training data into 10 subsets. The model was trained on 9 subsets and validated on the 10th, repeating the process for all subsets.
   The best λλ was selected based on the lowest mean squared error (MSE).
+
 **Model Training:**
   Lasso regression was trained using the features and target variable (log_price).
   After training, irrelevant or less impactful features had their coefficients shrunk to zero.
+
 ### Model Evaluation
 
 After training the Lasso regression model, its performance was evaluated on the test dataset. Key metrics were computed to assess its predictive ability, as summarized below:
+
 | Metric                         | Value           |
 |--------------------------------|-----------------|
 | Root Mean Squared Error (RMSE) | 141,285         |
@@ -412,7 +420,10 @@ The model was evaluated on the test dataset
 | Mean Squared Error (MSE)       | 53,792,452,624  |
 | R-Squared                      | 45.3%           |
 
-**Analysis** - The model's average prediction error RMSE was \$231932  indicates a considerable average deviation of predicted prices from actual values. This is expected given the variability in house prices due to high-priced luxury properties. RMSE benchmark ranges from \$300,000 to \$400,000 so the model seems to perform well. - The MAE of $150,142 indicates that, on average, the model's predictions deviate from the true price by approximately 43% of the median house price ($350,000) again likely influenced by luxury properties, but this seems reasonable. - R_squared of 45.3%  suggests that the model explains nearly half of the variance in house prices. This is moderate,it suggests that additional features may be required. ---
+**Analysis** 
+- The model's average prediction error RMSE was \$231932  indicates a considerable average deviation of predicted prices from actual values. This is expected given the variability in house prices due to high-priced luxury properties. RMSE benchmark ranges from \$300,000 to \$400,000 so the model seems to perform well. 
+- The MAE of $150,142 indicates that, on average, the model's predictions deviate from the true price by approximately 43% of the median house price ($350,000) again likely influenced by luxury properties, but this seems reasonable. 
+- R_squared of 45.3%  suggests that the model explains nearly half of the variance in house prices. This is moderate,it suggests that additional features may be required. 
 
 **Feature Importance**
 ```{r echo=FALSE, out.width="35%", fig.align='center',fig.cap= "Feature Importance - RandomForest"}
@@ -422,12 +433,18 @@ The most influential features, based on impurity reduction, were: 1. `house_size
 
 This aligns with domain knowledge that house size, and geographic factors influence property prices.
 
-**Comparison of Variants** Two Random Forest implementations were compared: 1. Using `ranger`: Faster training with cross-validation and target encoding resulted in robust performance. 2. Using `rf`: Provided similar performance metrics but required more computational time. Both implementations yielded comparable RMSE, MAE and $R^2$, showing the model's consistency across frameworks.
+**Comparison of Variants** Two Random Forest implementations were compared: 
+1. Using `ranger`: Faster training with cross-validation and target encoding resulted in robust performance. 
+2. Using `rf`: Provided similar performance metrics but required more computational time. Both implementations yielded comparable RMSE, MAE and $R^2$, showing the model's consistency across frameworks.
 
 ### Challenges and Limitations
-- The high cardinality of the categorical variables increased the dimensionality of the dataset, resulting in higher computational costs. Moreover, with the condition where p > n (the number of features exceeds the number of observations), additional challenges arose, as this often leads to overfitting and deteriorates model performance. To mitigate this, we grouped low-frequency variables before performing one-hot encoding. - Due to the high variation in the data, the standard errors were heteroscedastic. To address this, we computed robust standard errors to account for the unequal variability in the residuals. - In the initial implementation of random forest, the state and city variables were replaced with their respective average house prices (target encoding). While this approach tried to simplify the representation of geographic data, its reliability was questionable because it directly tied feature values to the target variable, this can lead to overfitting. - Another method involved assigning hierarchical labels to states based on their overall influence on house prices, this did not improve results. -The grid search process for tuning the XGBoost and RandomForest models took a considerable amount of time, highlighting the computational cost associated with optimizing multiple hyperparameters. - Overall, the model's performance could be improved by incorporating additional domain-relevant features, such as proximity to amenities (e.g., schools, parks, or public transportation) or crime rates in the area. These variables are known to significantly influence house prices but were not available in the dataset.
+- The high cardinality of the categorical variables increased the dimensionality of the dataset, resulting in higher computational costs. Moreover, with the condition where p > n (the number of features exceeds the number of observations), additional challenges arose, as this often leads to overfitting and deteriorates model performance. To mitigate this, we grouped low-frequency variables before performing one-hot encoding.
+- Due to the high variation in the data, the standard errors were heteroscedastic. To address this, we computed robust standard errors to account for the unequal variability in the residuals. 
+- In the initial implementation of random forest, the state and city variables were replaced with their respective average house prices (target encoding). While this approach tried to simplify the representation of geographic data, its reliability was questionable because it directly tied feature values to the target variable, this can lead to overfitting. - Another method involved assigning hierarchical labels to states based on their overall influence on house prices, this did not improve results. 
+-The grid search process for tuning the XGBoost and RandomForest models took a considerable amount of time, highlighting the computational cost associated with optimizing multiple hyperparameters. 
+- Overall, the model's performance could be improved by incorporating additional domain-relevant features, such as proximity to amenities (e.g., schools, parks, or public transportation) or crime rates in the area. These variables are known to significantly influence house prices but were not available in the dataset.
 
-Additional exploration of feature engineering and alternative sampling methods required.
+Additional exploration of feature engineering and alternative sampling methods is required.
 
 ## Evaluation
 
