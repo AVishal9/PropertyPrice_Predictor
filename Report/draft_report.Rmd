@@ -8,9 +8,12 @@ date: "2024-12-02"
 output:
   pdf_document:
     latex_engine: xelatex 
+    toc: true
 header-includes:
   - \usepackage[font=footnotesize]{caption}
 ---
+
+\newpage
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -46,8 +49,8 @@ The graph below visually represents the distribution of NA values across all the
 
 To address missing data, all rows with missing values (NA) were dropped, reducing the dataset size to around one million observations. Row-wise elimination was preferred over column-wise elimination because the features with the highest proportion of missing values were crucial to the analysis. Excluding these features would have significantly diminished the predictive power of the model.
 
-```{r echo=FALSE, out.width="40%", fig.align='center',fig.cap= "Distribution of NAs across Variables"}
-knitr::include_graphics("./PropertyPrice_Predictor/plots/DistributionNA.png")
+```{r echo=FALSE, out.width="35%", fig.align='center',fig.cap= "Distribution of NAs across Variables"}
+knitr::include_graphics("../plots/DistributionNA.png")
 ```
 
 2.  Adjusting the State Variable
@@ -70,13 +73,13 @@ To enhance the analysis, a new variable, sales_frequency, was created to capture
 
 **House Size**- In the dataset, it was observed that 75% of the houses had a size below 2,484 square feet, while the maximum value appeared unusually large at 1,560,780 square feet. This outlier suggests that there may be extreme values that do not accurately reflect the typical distribution of house sizes in the dataset.These could have been extremely luxurious house that do not represent the general population or a data entry error. To address this, we decided to perform outlier detection using the Interquartile Range (IQR) method.The calculated lower bound was found to be negative. Since house sizes cannot be negative, this result indicates that no house size values needed to be eliminated on the lower end of the distribution.The upper bound, was calculated as 4167 square feet. Based on the IQR method, any house size larger than this value was considered an outlier and was removed from the dataset.
 
-```{r, echo=FALSE, out.width="55%", fig.align='center', fig.cap="Before vs After Outlier Removal"}
+```{r, echo=FALSE, out.width="35%", fig.align='center', fig.cap="Before vs After Outlier Removal"}
 
 library(gridExtra)
 
 # Load the two images
-img1 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/HS_withoutlier.png"), interpolate = TRUE)
-img2 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/HS_withoutOutlier.png"), interpolate = TRUE)
+img1 <- grid::rasterGrob(png::readPNG("../plots/HS_withoutlier.png"), interpolate = TRUE)
+img2 <- grid::rasterGrob(png::readPNG("../plots/HS_withoutOutlier.png"), interpolate = TRUE)
 
 # Combine the images side by side
 grid.arrange(img1, img2, ncol=2)
@@ -84,12 +87,12 @@ grid.arrange(img1, img2, ncol=2)
 
 **Beds** - An initial exploration of the bedroom data revealed that 75% of houses have up to 4 bedrooms.However, there is an extreme value of 444 bedrooms, which is highly unusual and likely an outlier. To further identify potential outliers, the interquartile range method was employed.The interquartile range for bedrooms shows that 50% of properties have number of bedrooms within a range of 1. Any properties with bedrooms below 1.5 and above 5.5 have been eliminated.
 
-```{r, echo=FALSE, out.width="55%", fig.align='center', fig.cap="Before vs After Outlier Removal"}
+```{r, echo=FALSE, out.width="35%", fig.align='center', fig.cap="Before vs After Outlier Removal"}
 library(gridExtra)
 
 # Load the two images
-img1 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/bed_withoutlier.png"), interpolate = TRUE)
-img2 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/Bed_withoutoutlier.png"), interpolate = TRUE)
+img1 <- grid::rasterGrob(png::readPNG("../plots/bed_withoutlier.png"), interpolate = TRUE)
+img2 <- grid::rasterGrob(png::readPNG("../plots/Bed_withoutoutlier.png"), interpolate = TRUE)
 
 # Combine the images side by side
 grid.arrange(img1, img2, ncol=2)
@@ -97,12 +100,12 @@ grid.arrange(img1, img2, ncol=2)
 
 **Baths** - An analysis of the bath variable revealed that 75% of the properties have up to 3 bathrooms, however, there are some properties with 175 bathrooms. This number would either be a potential data entry or an outlier. To manage the outlier, Interquartile range method was applied. The lower bound was 0.5, which is less than the minimum observed value of baths in the dataset, therefore no cuts were made at the lower end of the tail.The upper bound of 4.5 suggests that properties with more than 4.5 bathrooms can be potential outliers. Therefore, we remove the properties with more than 4 bathrooms.
 
-```{r, echo=FALSE, out.width="55%", fig.align='center', fig.cap="Before vs After Outlier Removal"}
+```{r, echo=FALSE, out.width="35%", fig.align='center', fig.cap="Before vs After Outlier Removal"}
 library(gridExtra)
 
 # Load the two images
-img1 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/Bath_withoutlier.png"), interpolate = TRUE)
-img2 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/bath_withoutoutlier.png"), interpolate = TRUE)
+img1 <- grid::rasterGrob(png::readPNG("../plots/Bath_withoutlier.png"), interpolate = TRUE)
+img2 <- grid::rasterGrob(png::readPNG("../plots/bath_withoutoutlier.png"), interpolate = TRUE)
 
 # Combine the images side by side
 grid.arrange(img1, img2, ncol=2)
@@ -110,13 +113,13 @@ grid.arrange(img1, img2, ncol=2)
 
 **Acre_lot** To ensure uniformity in the dataset, land sizes recorded in acres were converted to square feet. This allowed for a consistent unit of measurement across all measurement variables, facilitating meaningful comparisons and analysis. 75% of the properties have a land size of less than or equal to 18,300 square feet.The dataset includes an extreme maximum value of 4,356,000,000 square feet, which was not properly plotted due to its magnitude, as illustrated in the first image below.An interquartile range (IQR) analysis was performed to identify potential outliers. The calculated lower bound was less than the minimum value in the dataset, signifying no outliers on the lower end. However, it was observed that some entries had a land size of 0, even though the corresponding house size was positive. This scenario is logically inconsistent, as it is not feasible for a house to exist without any land. To address this issue, all observations meeting these criteria (land size greater than house size) were removed from the dataset.
 
-```{r, echo=FALSE, out.width="55%", fig.align='center', fig.cap="Before vs After Outlier Removal"}
+```{r, echo=FALSE, out.width="35%", fig.align='center', fig.cap="Before vs After Outlier Removal"}
 
 library(gridExtra)
 
 # Load the two images
-img1 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/Land_size.png"), interpolate = TRUE)
-img2 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/land_size_after.png"), interpolate = TRUE)
+img1 <- grid::rasterGrob(png::readPNG("../plots/Land_size.png"), interpolate = TRUE)
+img2 <- grid::rasterGrob(png::readPNG("../plots/land_size_after.png"), interpolate = TRUE)
 
 # Combine the images side by side
 grid.arrange(img1, img2, ncol=2)
@@ -124,12 +127,12 @@ grid.arrange(img1, img2, ncol=2)
 
 **Target Variable - Price** To ensure the accuracy of the target variable, price, several inconsistencies were identified and addressed. There were houses priced between \$1 and \$5,000 in states like New York and California, which are unlikely to reflect realistic values and were flagged as potential data entry errors, necessitating their removal. Similarly, prices for small houses or studio apartments were unrealistically high in some states, particularly in California and New York. For instance, a 123 sq. ft. house in Texas was priced at \$160,000, while a 1,221 sq. ft. apartment in Alabama was listed at \$8,000, both of which are implausible. A detailed Price-to-House Size Ratio analysis revealed extreme outliers, such as properties priced at \$4,000 per sq. ft., likely indicating luxury homes. Minimum price-to-size ratios were also evaluated against typical residential market ranges for each state. Discrepancies were noted in states like California, where the minimum ratio of 37.1 was below the usual range of 100–200, and Delaware, where 18.7 was far below the expected range of 50–80. Additionally, states like Florida (18.1), Georgia (19.4), Michigan (1.89), Missouri (0.0006), and New York (5.79) displayed ratios too low for their respective housing markets, while Alaska's minimum ratio of 215 was unusually high. These anomalies, along with unrealistic price-to-size ratios in states such as Ohio (8.44), Pennsylvania (12.0), South Carolina (16.6), South Dakota (15.6), and Virginia (11.1), were systematically reviewed to refine the dataset and ensure reliable price data for subsequent analysis.
 
-```{r, echo=FALSE, out.width="55%", fig.align='center', fig.cap="Before vs After Outlier Removal"}
+```{r, echo=FALSE, out.width="35%", fig.align='center', fig.cap="Before vs After Outlier Removal"}
 library(gridExtra)
 
 # Load the two images
-img1 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/withoutlier.png"), interpolate = TRUE)
-img2 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/withoutoutlier.png"), interpolate = TRUE)
+img1 <- grid::rasterGrob(png::readPNG("../plots/withoutlier.png"), interpolate = TRUE)
+img2 <- grid::rasterGrob(png::readPNG("../plots/withoutoutlier.png"), interpolate = TRUE)
 
 # Combine the images side by side
 grid.arrange(img1, img2, ncol=2)
@@ -158,9 +161,11 @@ The bathroom-to-bedroom ratio was calculated to evaluate how many bathrooms are 
 
 This heatmap illustrates the correlation between numeric variables in the dataset, including price, number of bedrooms (bed), number of bathrooms (bath), house size, sale frequency, and land size. Strong positive correlations are observed between variables such as house size and number of bathrooms (0.71) and between house size and number of bedrooms (0.62). On the other hand, land size and sale frequency show minimal correlation with price and other variables, suggesting limited influence on these factors.
 
-```{r echo=FALSE,out.width="45%", fig.align='center',fig.cap= "Correlation Matrix"}
-knitr::include_graphics("./PropertyPrice_Predictor/plots/Corr_matrix.png")
+```{r echo=FALSE,out.width="35%", fig.align='center',fig.cap= "Correlation Matrix"}
+knitr::include_graphics("../plots/Corr_matrix.png")
 ```
+
+\newpage
 
 # Models
 
@@ -208,9 +213,9 @@ $$Log(price_i)=Log(HouseSize_i)+ FinalRegressors_i+ u_i$$However, it failed the 
 library(gridExtra)
 
 # Load the two images
-img1 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/Linear-Linear.png"), interpolate = TRUE)
-img2 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/log-linear.png"), interpolate = TRUE)
-img3 <- grid::rasterGrob(png::readPNG("./PropertyPrice_Predictor/plots/log-log.png"), interpolate = TRUE)
+img1 <- grid::rasterGrob(png::readPNG("../plots/Linear-Linear.png"), interpolate = TRUE)
+img2 <- grid::rasterGrob(png::readPNG("../plots/log-linear.png"), interpolate = TRUE)
+img3 <- grid::rasterGrob(png::readPNG("../plots/log-log.png"), interpolate = TRUE)
 
 # Combine the images side by side
 grid.arrange(img1, img2, img3, ncol=2)
@@ -290,7 +295,7 @@ A random search was employed to explore a broader range of hyperparameters. Rand
 **Parameter Selection:** The best performing combination of hyperparameters was eta of 0.2721691, max_depth of 4, subsample of 0.8950382, colsample_bytree of 0.7518237 and the corresponding RMSE value was 172329.10
 
 **Final Model:** - Grid Search yielded a lower RMSE compared to Random Search, indicating that it provided a better set of hyperparameters for the XGBoost model. Therefore, the parameters chosen by Grid search were used for training our model.
-
+\newpage
 The performance of the final XGBoost model is represented below -
 
 | Metric                         | Value          |
@@ -410,8 +415,8 @@ The model was evaluated on the test dataset
 **Analysis** - The model's average prediction error RMSE was \$231932  indicates a considerable average deviation of predicted prices from actual values. This is expected given the variability in house prices due to high-priced luxury properties. RMSE benchmark ranges from \$300,000 to \$400,000 so the model seems to perform well. - The MAE of $150,142 indicates that, on average, the model's predictions deviate from the true price by approximately 43% of the median house price ($350,000) again likely influenced by luxury properties, but this seems reasonable. - R_squared of 45.3%  suggests that the model explains nearly half of the variance in house prices. This is moderate,it suggests that additional features may be required. ---
 
 **Feature Importance**
-```{r echo=FALSE, out.width="49%", fig.align='center',fig.cap= "Feature Importance - RandomForest"}
-knitr::include_graphics("./plots/rf_featureImp.png")
+```{r echo=FALSE, out.width="35%", fig.align='center',fig.cap= "Feature Importance - RandomForest"}
+knitr::include_graphics("../plots/rf_featureImp.png")
 ```
 The most influential features, based on impurity reduction, were: 1. `house_size` 2. `region_West` 3. `bath` 4. `city_freq` 5. `land_size`
 
@@ -447,21 +452,21 @@ Extra and Preliminary visualizations
 The majority of properties fall within the 250K-500K category, followed by <250K. Higher price ranges, such as 750K-1M and >1M, have significantly fewer properties, indicating that lower to mid-range houses dominate the dataset which is in line with real world expectation. This data was later modified to account for outliers.
 
 ```{r echo=FALSE,out.width="49%", fig.align='center',fig.cap= "Distribution of Price"}
-knitr::include_graphics("./plots/price_distribution_categories.png")
+knitr::include_graphics("../plots/price_distribution_categories.png")
 ```
 
 ```{r echo=FALSE, out.width="49%", fig.align='center',fig.cap= "Top Affordable States"}
-knitr::include_graphics("./plots/top_affordable_states.png")
+knitr::include_graphics("../plots/top_affordable_states.png")
 ```
 
 ```{r echo=FALSE, out.width="49%", fig.align='center',fig.cap= "Top Luxury States."}
-knitr::include_graphics("./plots/top_luxury_states.png")
+knitr::include_graphics("../plots/top_luxury_states.png")
 ```
 
 ```{r echo=FALSE, out.width="49%", fig.align='center',fig.cap= "Affordable Vs Luxury Houses"}
-knitr::include_graphics("./plots/affordable_vs_luxury_prices.png")
+knitr::include_graphics("../plots/affordable_vs_luxury_prices.png")
 ```
 
 ```{r echo=FALSE,out.width="49%", fig.align='center',fig.cap= "Average Price per state"}
-knitr::include_graphics("./plots/average_price_per_state.png")
+knitr::include_graphics("../plots/average_price_per_state.png")
 ```
