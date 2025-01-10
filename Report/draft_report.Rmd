@@ -425,7 +425,7 @@ Additional exploration of feature engineering and alternative sampling methods r
 ## Evaluation
 
 | Model             | Mean Absolute Error (MAE) | Mean Squared Error (MSE) | Root Mean Squared Error (RMSE) | R-Squared |
-|---------------|---------------|---------------|---------------|---------------|
+|-------------------|---------------------------|--------------------------|--------------------------------|-----------|
 | Linear Regression | 136204.90                 | 50,681,092,062           | 225124.60                      | 48.48%    |
 | XGBoost           | 103769.60                 | 26,226,219,981           | 161945.10                      | 70.28%    |
 | Random Forest     | 134,830.3                 | 108,808,930,589          | 329862                         | 70.7%     |
