@@ -162,11 +162,6 @@ This heatmap illustrates the correlation between numeric variables in the datase
 knitr::include_graphics("./PropertyPrice_Predictor/plots/Corr_matrix.png")
 ```
 
-```{r echo=FALSE,out.width="49%", fig.align='center',fig.cap= "Distribution of Price"}
-knitr::include_graphics("./plots/price_distribution_categories.png")
-```
-
-
 # Models
 
 ## Model: Linear Regression
@@ -426,7 +421,15 @@ Additional exploration of feature engineering and alternative sampling methods r
 | Lasso             | 0.3695                    | 0.2285                   | 0.4780                         | 45.84%    |
 
 ## Appendix
-Extra visualizations 
+Extra and Preliminary visualizations 
+
+#### House Price Distribution
+
+The majority of properties fall within the 250K-500K category, followed by <250K. Higher price ranges, such as 750K-1M and >1M, have significantly fewer properties, indicating that lower to mid-range houses dominate the dataset which is in line with real world expectation. This data was later modified to account for outliers.
+
+```{r echo=FALSE,out.width="49%", fig.align='center',fig.cap= "Distribution of Price"}
+knitr::include_graphics("./plots/price_distribution_categories.png")
+```
 
 ```{r echo=FALSE, out.width="49%", fig.align='center',fig.cap= "Top Affordable States"}
 knitr::include_graphics("./plots/top_affordable_states.png")
